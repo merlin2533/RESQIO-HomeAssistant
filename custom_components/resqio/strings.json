@@ -28,7 +28,7 @@
           "password": "Password",
           "topic_root": "Topic root",
           "departments": "Department slugs (comma-separated)",
-          "ca_pem": "CA certificate (optional, PEM)"
+          "ca_file": "CA certificate (optional, upload .pem/.crt)"
         },
         "data_description": {
           "departments": "The slugs of the released fire departments, e.g. hauptwache, ortsteil-nord."
@@ -68,7 +68,8 @@
       "invalid_username": "The username is invalid.",
       "invalid_topic_root": "The topic root is invalid.",
       "invalid_departments": "The department slugs are invalid or duplicated.",
-      "unknown": "Unknown error."
+      "unknown": "Unknown error.",
+      "invalid_certificate": "The file is not a valid PEM certificate."
     },
     "abort": {
       "already_configured": "This access is already set up. Its access data were updated.",

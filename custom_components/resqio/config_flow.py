@@ -13,8 +13,11 @@ from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_RECONFIGURE, Conf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv  # noqa: F401 - Selektoren laden
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.components.file_upload import process_uploaded_file
 from homeassistant.helpers.selector import (
     BooleanSelector,
+    FileSelector,
+    FileSelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -69,7 +72,7 @@ MANUAL_SCHEMA = vol.Schema(
         vol.Required("password"): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
         vol.Required("topic_root", default="HomeAssistant"): TextSelector(),
         vol.Required("departments"): TextSelector(),
-        vol.Optional("ca_pem"): TextSelector(TextSelectorConfig(multiline=True)),
+        vol.Optional("ca_file"): FileSelector(FileSelectorConfig(accept=".pem,.crt,.cer,.ca-bundle")),
     }
 )
 
@@ -145,9 +148,11 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 departments = parse_departments_text(str(user_input["departments"]))
+                ca_pem = await self._async_read_ca_file(user_input.get("ca_file"))
                 settings = build_settings(
                     {
-                        **user_input,
+                        **{k: v for k, v in user_input.items() if k != "ca_file"},
+                        "ca_pem": ca_pem,
                         "broker_port": int(user_input["broker_port"]),
                         "departments": [{"slug": d.slug, "name": d.name} for d in departments],
                     }
@@ -158,6 +163,23 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 return await self._async_complete(settings)
         return self.async_show_form(step_id="manual", data_schema=MANUAL_SCHEMA, errors=errors)
+
+    async def _async_read_ca_file(self, file_id: str | None) -> str | None:
+        """Liest ein hochgeladenes CA-Zertifikat (PEM). Ohne Datei: None (System-Zertifikate)."""
+        if not file_id:
+            return None
+
+        def _read() -> str:
+            with process_uploaded_file(self.hass, file_id) as path:
+                return path.read_text(encoding="utf-8", errors="strict")
+
+        try:
+            text = await self.hass.async_add_executor_job(_read)
+        except (OSError, ValueError) as err:
+            raise InvalidSettings("invalid_certificate") from err
+        if "BEGIN CERTIFICATE" not in text:
+            raise InvalidSettings("invalid_certificate")
+        return text
 
     async def async_step_tls_notice(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Hinweis auf eine unverschluesselte Verbindung; erst nach Bestaetigung wird gespeichert."""
