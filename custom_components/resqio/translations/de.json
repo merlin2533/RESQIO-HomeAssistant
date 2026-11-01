@@ -19,19 +19,12 @@
       },
       "manual": {
         "title": "Manuell einrichten",
-        "description": "Zugangsdaten aus RESQIO (Enterprise, Home Assistant, Zugang) eintragen.",
+        "description": "Server-Adresse und Zugangsdaten aus RESQIO (Enterprise, Home Assistant). Broker, Zertifikat und freigegebene Wehren holt die Integration selbst.",
         "data": {
-          "broker_host": "Broker-Host",
-          "broker_port": "Port",
-          "broker_tls": "TLS verwenden",
+          "url": "RESQIO-Server-Adresse",
           "username": "Benutzername",
           "password": "Passwort",
-          "topic_root": "Topic-Wurzel",
-          "departments": "Wehr-Kürzel (kommagetrennt)",
-          "ca_file": "CA-Zertifikat (optional, Datei hochladen: .pem/.crt)"
-        },
-        "data_description": {
-          "departments": "Die Kürzel der freigegebenen Feuerwehren, z. B. hauptwache, ortsteil-nord."
+          "ca_file": "CA-Zertifikat (optional, überschreibt das vom Server)"
         }
       },
       "reauth_confirm": {
