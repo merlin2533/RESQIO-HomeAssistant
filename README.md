@@ -88,7 +88,7 @@ Eine Beispielkarte für Ihr Dashboard liegt in `lovelace/resqio-alarm-card.yaml`
 
 ## Lizenz
 
-Jeder darf die Integration **kostenlos nutzen, aber nicht gewerblich** (PolyForm Noncommercial 1.0.0, siehe `LICENSE`). Feuerwehren, Gemeinden und Vereine dürfen sie selbstverständlich einsetzen. Bei jeder Weitergabe muss der Hinweis auf **RESQIO** und dieses Repository (Required Notice in `LICENSE`) erhalten bleiben. Für eine gewerbliche Nutzung sprechen Sie uns bitte vorher an.
+Apache License 2.0 (siehe `LICENSE`). Die Integration darf frei genutzt und verändert werden. Bei jeder Weitergabe müssen die Lizenz und der Hinweis auf **RESQIO** (Datei `NOTICE`) erhalten bleiben.
 
 ## Unterstützen
 
