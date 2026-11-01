@@ -41,6 +41,7 @@ def test_manifest_starts_clean_and_keys_are_sorted() -> None:
     keys = list(manifest)
     assert keys[:2] == ["domain", "name"]
     assert keys[2:] == sorted(keys[2:])
-    assert "dependencies" not in manifest
+    # Einzige Abhaengigkeit: file_upload fuer den CA-Zertifikat-Upload im Config-Flow (kein MQTT-Add-on noetig).
+    assert manifest["dependencies"] == ["file_upload"]
     assert manifest["integration_type"] == "hub"
     assert nv.next_version([], manifest["version"]) == manifest["version"]
