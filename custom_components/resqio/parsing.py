@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -399,7 +400,7 @@ def parse_gauge(text: str) -> dict[str, Any] | None:
 
 
 def parse_closures(text: str) -> list[dict[str, Any]] | None:
-    """Aktive Strassensperrungen: nur Name, Grund und Zeitraum (keine Geometrie)."""
+    """Aktive Strassensperrungen: nur Name und Zeitraum (keine Geometrie, kein Freitext)."""
     try:
         data = json.loads(text)
     except ValueError:
@@ -413,7 +414,6 @@ def parse_closures(text: str) -> list[dict[str, Any]] | None:
         items.append(
             {
                 "name": _short(raw.get("name"), 200),
-                "reason": _short(raw.get("reason"), 200),
                 "start": parse_datetime(raw.get("start")),
                 "end": parse_datetime(raw.get("end")),
             }
@@ -570,6 +570,21 @@ def normalize_server_url(url: str) -> str:
     if parts.scheme not in ("http", "https") or not parts.netloc:
         raise InvalidSettings("invalid_url")
     return cleaned
+
+
+CLIENT_ID_PREFIX = "resqio-ha-"
+
+
+def make_client_id(username: str, purpose: str = "") -> str:
+    """Client-ID `resqio-ha-<benutzer>[-probe]-<zufall>`.
+
+    Der RESQIO-Broker uebernimmt eine bereits verbundene Client-ID und trennt den alten Client. Er
+    akzeptiert Zugaenge mit Benutzernamen `ha_...` deshalb NUR mit dem Praefix `resqio-ha-`, und
+    sperrt dieses Praefix fuer alle anderen Benutzer. Der Zufallsteil verhindert, dass zwei
+    Verbindungen desselben Zugangs (z. B. Pruefung und Betrieb) einander verdraengen.
+    """
+    middle = f"{purpose}-" if purpose else ""
+    return f"{CLIENT_ID_PREFIX}{username}-{middle}{secrets.token_hex(4)}"
 
 
 def normalize_pairing_code(code: str) -> str:

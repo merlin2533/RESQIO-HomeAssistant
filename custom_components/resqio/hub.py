@@ -8,7 +8,6 @@ ueber die MQTT-Integration von Home Assistant. Sie abonniert je Wehr
 from __future__ import annotations
 
 import logging
-import secrets
 import ssl
 import threading
 from datetime import datetime
@@ -20,7 +19,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .const import signal_alarm_event, signal_new_topic, signal_update
-from .parsing import ConnectionSettings, Kind, Reading, decode_reading
+from .parsing import ConnectionSettings, Kind, Reading, decode_reading, make_client_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +63,7 @@ def probe_connection(settings: ConnectionSettings) -> str | None:
             outcome["error"] = None
         done.set()
 
-    client = _new_client(settings, f"resqio-ha-probe-{secrets.token_hex(4)}")
+    client = _new_client(settings, make_client_id(settings.username, "probe"))
     client.on_connect = on_connect
     try:
         if settings.broker_tls:
@@ -100,7 +99,7 @@ class ResqioHub:
         ssl_context = None
         if self.settings.broker_tls:
             ssl_context = await self.hass.async_add_executor_job(build_ssl_context, self.settings.ca_pem)
-        client = _new_client(self.settings, f"resqio-ha-{secrets.token_hex(4)}")
+        client = _new_client(self.settings, make_client_id(self.settings.username))
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect
         client.on_message = self._on_message

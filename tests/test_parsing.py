@@ -307,7 +307,8 @@ def test_closures_drop_geometry() -> None:
         }
     ]
     items = p.parse_closures(json.dumps(payload))
-    assert items is not None and set(items[0]) == {"name", "reason", "start", "end"}
+    assert items is not None and set(items[0]) == {"name", "start", "end"}
+    assert "Baustelle" not in str(items)
 
 
 # --------------------------------------------------------------------------- Einstellungen
@@ -436,3 +437,22 @@ def test_humanize_slug() -> None:
 def test_parsing_module_has_no_homeassistant_import() -> None:
     source = (Path(p.__file__)).read_text(encoding="utf-8")
     assert "homeassistant" not in source
+
+
+# --------------------------------------------------------------------------- Client-ID
+
+
+def test_client_id_has_reserved_prefix_and_username() -> None:
+    client_id = p.make_client_id("ha_0123456789ab")
+    assert client_id.startswith("resqio-ha-ha_0123456789ab-")
+    assert len(client_id) <= 128
+
+
+def test_client_id_is_unique_per_connection() -> None:
+    assert p.make_client_id("ha_0123456789ab") != p.make_client_id("ha_0123456789ab")
+
+
+def test_probe_client_id_differs_from_operating_id() -> None:
+    probe = p.make_client_id("ha_0123456789ab", "probe")
+    assert probe.startswith(p.CLIENT_ID_PREFIX)
+    assert "-probe-" in probe
