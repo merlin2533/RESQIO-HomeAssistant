@@ -1,13 +1,19 @@
 {
   "domain": "resqio",
   "name": "RESQIO",
-  "codeowners": ["@merlin2533"],
+  "codeowners": [
+    "@merlin2533"
+  ],
   "config_flow": true,
-  "dependencies": ["mqtt"],
+  "dependencies": [
+    "mqtt"
+  ],
   "documentation": "https://github.com/merlin2533/RESQIO-HomeAssistant",
-  "issue_tracker": "https://github.com/merlin2533/RESQIO-HomeAssistant/issues",
-  "iot_class": "local_push",
   "integration_type": "device",
-  "requirements": ["paho-mqtt>=2.0.0"],
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/merlin2533/RESQIO-HomeAssistant/issues",
+  "requirements": [
+    "paho-mqtt>=2.0.0"
+  ],
   "version": "0.1.0"
 }
