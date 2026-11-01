@@ -19,19 +19,12 @@
       },
       "manual": {
         "title": "Manual setup",
-        "description": "Enter the access data from RESQIO (Enterprise, Home Assistant, access).",
+        "description": "Server address and access data from RESQIO (Enterprise, Home Assistant). The integration fetches broker, certificate and released fire departments itself.",
         "data": {
-          "broker_host": "Broker host",
-          "broker_port": "Port",
-          "broker_tls": "Use TLS",
+          "url": "RESQIO server address",
           "username": "Username",
           "password": "Password",
-          "topic_root": "Topic root",
-          "departments": "Department slugs (comma-separated)",
-          "ca_file": "CA certificate (optional, upload .pem/.crt)"
-        },
-        "data_description": {
-          "departments": "The slugs of the released fire departments, e.g. hauptwache, ortsteil-nord."
+          "ca_file": "CA certificate (optional, overrides the server's)"
         }
       },
       "reauth_confirm": {
