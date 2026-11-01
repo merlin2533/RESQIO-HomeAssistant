@@ -1,0 +1,53 @@
+blueprint:
+  name: RESQIO – Ansage mit Stichwort
+  description: >-
+    Spricht das Einsatzstichwort über einen Lautsprecher oder ein Display an, sobald
+    RESQIO das Stichwort meldet. Nur während eines aktiven Alarms.
+  domain: automation
+  input:
+    stichwort_sensor:
+      name: Stichwort-Sensor
+      description: Sensor „Stichwort“ der Wehr (Gerät „RESQIO <Wehr>“).
+      selector:
+        entity:
+          domain: sensor
+    alarm_sensor:
+      name: Alarm-Sensor
+      description: Binärsensor „Alarm aktiv“ der Wehr.
+      selector:
+        entity:
+          domain: binary_sensor
+    tts_entity:
+      name: Sprachausgabe (TTS)
+      selector:
+        entity:
+          domain: tts
+    lautsprecher:
+      name: Lautsprecher
+      selector:
+        entity:
+          domain: media_player
+
+trigger:
+  - trigger: state
+    entity_id: !input stichwort_sensor
+    id: stichwort
+
+condition:
+  - condition: state
+    entity_id: !input alarm_sensor
+    state: "on"
+  - condition: template
+    value_template: >-
+      {{ states(trigger.entity_id) not in ['unknown', 'unavailable', ''] }}
+
+action:
+  - action: tts.speak
+    target:
+      entity_id: !input tts_entity
+    data:
+      media_player_entity_id: !input lautsprecher
+      message: "Alarm. Stichwort: {{ states(trigger.entity_id) }}"
+
+mode: queued
+max: 5

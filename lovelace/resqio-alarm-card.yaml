@@ -1,0 +1,47 @@
+# Beispielkarte für den Alarmstatus einer Wehr. Keine eigene JavaScript-Karte nötig.
+# Ersetzen Sie die Entitäts-IDs durch die Ihrer Wehr (Entwicklerwerkzeuge > Entitäten,
+# Suche nach „resqio“). Die Entitäten entstehen erst, wenn RESQIO die Daten sendet.
+#
+# In Lovelace: Dashboard bearbeiten > Karte hinzufügen > Manuell > Inhalt einfügen.
+type: vertical-stack
+cards:
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: binary_sensor.resqio_hauptwache_alarm_aktiv
+        state: "on"
+    card:
+      type: markdown
+      content: >-
+        ## 🚨 Alarm aktiv
+
+        **Stichwort:** {{ states('sensor.resqio_hauptwache_stichwort') }}
+
+        **Kategorie:** {{ states('sensor.resqio_hauptwache_kategorie') }}
+
+        **Alarmzeit:** {{ as_timestamp(states('sensor.resqio_hauptwache_alarmzeit'), 0) | timestamp_custom('%H:%M Uhr') }}
+
+        **Einsatzort:** {{ states('sensor.resqio_hauptwache_einsatzort') }}
+
+        {% if states('sensor.resqio_hauptwache_alarmtext') not in ['unknown', 'unavailable'] %}
+        **Alarmtext:** {{ states('sensor.resqio_hauptwache_alarmtext') }}
+        {% endif %}
+  - type: entities
+    title: Fahrzeuge
+    entities:
+      - entity: sensor.resqio_hauptwache_lf_10_fms
+        name: LF 10
+      - entity: sensor.resqio_hauptwache_fahrzeuge_ausgerueckt
+        name: Ausgerückt
+  - type: entities
+    title: Personal
+    entities:
+      - entity: sensor.resqio_hauptwache_zusagen
+      - entity: sensor.resqio_hauptwache_vorbehalt
+      - entity: sensor.resqio_hauptwache_absagen
+      - entity: sensor.resqio_hauptwache_ohne_rueckmeldung
+      - entity: sensor.resqio_hauptwache_anwesend
+  - type: entities
+    title: Verbindung
+    entities:
+      - entity: binary_sensor.resqio_hauptwache_bridge_online

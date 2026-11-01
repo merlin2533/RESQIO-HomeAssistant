@@ -14,9 +14,7 @@ from .hub import ResqioHub
 TO_REDACT = {"password", "username", CONF_CA_PEM}
 
 
-async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry[ResqioHub]
-) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry[ResqioHub]) -> dict[str, Any]:
     hub = entry.runtime_data
     return {
         "entry": async_redact_data(dict(entry.data), TO_REDACT),

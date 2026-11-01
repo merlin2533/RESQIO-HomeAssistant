@@ -1,0 +1,47 @@
+blueprint:
+  name: RESQIO – Tor öffnen bei Alarm
+  description: >-
+    Öffnet ein Gerätehaus-Tor, sobald RESQIO einen Alarm meldet. Optional mit Verzögerung,
+    damit die Einsatzkräfte vorher das Tor-Umfeld prüfen können.
+  domain: automation
+  input:
+    alarm_sensor:
+      name: Alarm-Sensor
+      description: Binärsensor „Alarm aktiv“ der Wehr.
+      selector:
+        entity:
+          domain: binary_sensor
+    tore:
+      name: Tor(e)
+      selector:
+        target:
+          entity:
+            domain: cover
+    verzoegerung:
+      name: Verzögerung vor dem Öffnen (Sekunden)
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: s
+          mode: slider
+
+trigger:
+  - trigger: state
+    entity_id: !input alarm_sensor
+    from: "off"
+    to: "on"
+
+action:
+  - if:
+      - condition: template
+        value_template: "{{ verzoegerung | int(0) > 0 }}"
+    then:
+      - delay:
+          seconds: !input verzoegerung
+  - action: cover.open_cover
+    target: !input tore
+
+mode: single

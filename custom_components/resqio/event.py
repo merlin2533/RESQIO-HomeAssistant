@@ -5,6 +5,8 @@ Das Topic ist nicht retained. Ausgeloest wird nur bei Live-Nachrichten (siehe hu
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from homeassistant.components.event import EventEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -19,7 +21,7 @@ from .parsing import ALARM_EVENT_TYPES, Kind
 
 
 class ResqioAlarmEvent(ResqioEntity, EventEntity):
-    _attr_event_types = list(ALARM_EVENT_TYPES)
+    _attr_event_types: ClassVar[list[str]] = list(ALARM_EVENT_TYPES)
     _attr_icon = "mdi:bell-ring"
 
     def __init__(self, hub: ResqioHub, slug: str, key: str) -> None:
@@ -32,9 +34,7 @@ class ResqioAlarmEvent(ResqioEntity, EventEntity):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, signal_alarm_event(self._hub.entry_id), self._handle_event
-            )
+            async_dispatcher_connect(self.hass, signal_alarm_event(self._hub.entry_id), self._handle_event)
         )
 
     @callback
@@ -51,7 +51,5 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
     return []
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-) -> None:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     await async_setup_dynamic(hass, entry, "event", async_add_entities, _build)

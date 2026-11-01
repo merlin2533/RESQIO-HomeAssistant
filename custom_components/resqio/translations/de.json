@@ -1,0 +1,150 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "RESQIO einrichten",
+        "description": "Wie soll die Verbindung eingerichtet werden?",
+        "menu_options": {
+          "pairing": "Mit Kopplungscode koppeln (empfohlen)",
+          "manual": "Manuell mit Zugangsdaten"
+        }
+      },
+      "pairing": {
+        "title": "Mit Kopplungscode koppeln",
+        "description": "Den Code erzeugen Sie in RESQIO unter Enterprise, Home Assistant, Zugang koppeln. Er ist 10 Minuten gültig und wird mit dem Speichern verbraucht. Schlägt die Kopplung fehl, erzeugen Sie bitte einen neuen Code.",
+        "data": {
+          "url": "Adresse des RESQIO-Servers",
+          "code": "Kopplungscode"
+        }
+      },
+      "manual": {
+        "title": "Manuell einrichten",
+        "description": "Zugangsdaten aus RESQIO (Enterprise, Home Assistant, Zugang) eintragen.",
+        "data": {
+          "broker_host": "Broker-Host",
+          "broker_port": "Port",
+          "broker_tls": "TLS verwenden",
+          "username": "Benutzername",
+          "password": "Passwort",
+          "topic_root": "Topic-Wurzel",
+          "departments": "Wehr-Kürzel (kommagetrennt)",
+          "ca_pem": "CA-Zertifikat (optional, PEM)"
+        },
+        "data_description": {
+          "departments": "Die Kürzel der freigegebenen Feuerwehren, z. B. hauptwache, ortsteil-nord."
+        }
+      }
+    },
+    "error": {
+      "pairing_failed": "Kopplung fehlgeschlagen. Bitte Server-Adresse und Code prüfen.",
+      "rate_limited": "Zu viele Versuche. Bitte später erneut versuchen.",
+      "cannot_connect": "Der Server oder Broker ist nicht erreichbar.",
+      "invalid_response": "Die Antwort des Servers ist ungültig.",
+      "invalid_url": "Die Server-Adresse ist ungültig.",
+      "invalid_code": "Der Code hat ein ungültiges Format.",
+      "invalid_auth": "Benutzername oder Passwort wurden abgelehnt.",
+      "invalid_host": "Der Broker-Host ist ungültig.",
+      "invalid_port": "Der Port ist ungültig.",
+      "invalid_username": "Der Benutzername ist ungültig.",
+      "invalid_topic_root": "Die Topic-Wurzel ist ungültig.",
+      "invalid_departments": "Die Wehr-Kürzel sind ungültig oder doppelt.",
+      "unknown": "Unbekannter Fehler."
+    },
+    "abort": {
+      "already_configured": "Dieser Zugang ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "alarm_active": {
+        "name": "Alarm aktiv"
+      },
+      "bridge_online": {
+        "name": "Bridge online"
+      }
+    },
+    "sensor": {
+      "alarm_status": {
+        "name": "Status"
+      },
+      "keyword": {
+        "name": "Stichwort"
+      },
+      "alarm_time": {
+        "name": "Alarmzeit"
+      },
+      "category": {
+        "name": "Kategorie"
+      },
+      "location": {
+        "name": "Einsatzort"
+      },
+      "alarm_text": {
+        "name": "Alarmtext"
+      },
+      "vehicles_out": {
+        "name": "Fahrzeuge ausgerückt"
+      },
+      "personnel_accepted": {
+        "name": "Zusagen"
+      },
+      "personnel_tentative": {
+        "name": "Vorbehalt"
+      },
+      "personnel_declined": {
+        "name": "Absagen"
+      },
+      "personnel_pending": {
+        "name": "Ohne Rückmeldung"
+      },
+      "personnel_present": {
+        "name": "Anwesend"
+      },
+      "maintenance_open_total": {
+        "name": "Wartungen offen gesamt"
+      },
+      "defects_open_total": {
+        "name": "Mängel offen gesamt"
+      },
+      "events_next": {
+        "name": "Nächste Veranstaltung"
+      },
+      "events_upcoming": {
+        "name": "Anstehende Veranstaltungen"
+      },
+      "news_latest": {
+        "name": "Neueste Meldung"
+      },
+      "road_closures": {
+        "name": "Straßensperrungen"
+      }
+    },
+    "device_tracker": {
+      "alarm_position": {
+        "name": "Einsatzposition"
+      }
+    },
+    "event": {
+      "alarm_event": {
+        "name": "Alarmereignis",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "neu": "Neu",
+              "nachalarmiert": "Nachalarmiert",
+              "beendet": "Beendet"
+            }
+          }
+        }
+      }
+    },
+    "calendar": {
+      "events_calendar": {
+        "name": "Veranstaltungen"
+      },
+      "reservations_all": {
+        "name": "Reservierungen gesamt"
+      }
+    }
+  }
+}

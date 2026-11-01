@@ -99,9 +99,7 @@ class ResqioHub:
     async def async_start(self) -> None:
         ssl_context = None
         if self.settings.broker_tls:
-            ssl_context = await self.hass.async_add_executor_job(
-                build_ssl_context, self.settings.ca_pem
-            )
+            ssl_context = await self.hass.async_add_executor_job(build_ssl_context, self.settings.ca_pem)
         client = _new_client(self.settings, f"resqio-ha-{secrets.token_hex(4)}")
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect
@@ -138,14 +136,9 @@ class ResqioHub:
         return {
             "connected": self.connected,
             "message_count": self.message_count,
-            "last_message_at": {
-                slug: when.isoformat() for slug, when in self.last_message_at.items()
-            },
+            "last_message_at": {slug: when.isoformat() for slug, when in self.last_message_at.items()},
             "topics": sorted(
-                {
-                    f"{slug}/{key}": reading.value is not None
-                    for (slug, key), reading in self.readings.items()
-                }.items()
+                {f"{slug}/{key}": reading.value is not None for (slug, key), reading in self.readings.items()}.items()
             ),
         }
 
@@ -195,9 +188,7 @@ class ResqioHub:
         if reading.kind is Kind.ALARM_EVENT and reading.value and not reading.retained:
             # Ein Alarm-Ereignis loest nur aus, wenn es live ankommt. Retained Nachrichten
             # beim Verbinden waeren sonst ein falscher Alarm beim Start von Home Assistant.
-            async_dispatcher_send(
-                self.hass, signal_alarm_event(self.entry_id), reading.slug, reading.value
-            )
+            async_dispatcher_send(self.hass, signal_alarm_event(self.entry_id), reading.slug, reading.value)
 
         previous = self.readings.get(key)
         self.readings[key] = reading

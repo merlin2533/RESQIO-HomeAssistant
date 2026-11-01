@@ -37,7 +37,5 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
     return []
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-) -> None:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     await async_setup_dynamic(hass, entry, "device_tracker", async_add_entities, _build)

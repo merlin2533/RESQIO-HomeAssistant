@@ -1,0 +1,150 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up RESQIO",
+        "description": "How should the connection be set up?",
+        "menu_options": {
+          "pairing": "Pair with code (recommended)",
+          "manual": "Manual with access data"
+        }
+      },
+      "pairing": {
+        "title": "Pair with code",
+        "description": "Create the code in RESQIO under Enterprise, Home Assistant, pair access. It is valid for 10 minutes and is used up when saved. If pairing fails, please create a new code.",
+        "data": {
+          "url": "RESQIO server address",
+          "code": "Pairing code"
+        }
+      },
+      "manual": {
+        "title": "Manual setup",
+        "description": "Enter the access data from RESQIO (Enterprise, Home Assistant, access).",
+        "data": {
+          "broker_host": "Broker host",
+          "broker_port": "Port",
+          "broker_tls": "Use TLS",
+          "username": "Username",
+          "password": "Password",
+          "topic_root": "Topic root",
+          "departments": "Department slugs (comma-separated)",
+          "ca_pem": "CA certificate (optional, PEM)"
+        },
+        "data_description": {
+          "departments": "The slugs of the released fire departments, e.g. hauptwache, ortsteil-nord."
+        }
+      }
+    },
+    "error": {
+      "pairing_failed": "Pairing failed. Please check the server address and code.",
+      "rate_limited": "Too many attempts. Please try again later.",
+      "cannot_connect": "The server or broker cannot be reached.",
+      "invalid_response": "The server response is invalid.",
+      "invalid_url": "The server address is invalid.",
+      "invalid_code": "The code has an invalid format.",
+      "invalid_auth": "Username or password was rejected.",
+      "invalid_host": "The broker host is invalid.",
+      "invalid_port": "The port is invalid.",
+      "invalid_username": "The username is invalid.",
+      "invalid_topic_root": "The topic root is invalid.",
+      "invalid_departments": "The department slugs are invalid or duplicated.",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "already_configured": "This access is already set up."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "alarm_active": {
+        "name": "Alarm active"
+      },
+      "bridge_online": {
+        "name": "Bridge online"
+      }
+    },
+    "sensor": {
+      "alarm_status": {
+        "name": "Status"
+      },
+      "keyword": {
+        "name": "Keyword"
+      },
+      "alarm_time": {
+        "name": "Alarm time"
+      },
+      "category": {
+        "name": "Category"
+      },
+      "location": {
+        "name": "Location"
+      },
+      "alarm_text": {
+        "name": "Alarm text"
+      },
+      "vehicles_out": {
+        "name": "Vehicles deployed"
+      },
+      "personnel_accepted": {
+        "name": "Accepted"
+      },
+      "personnel_tentative": {
+        "name": "Tentative"
+      },
+      "personnel_declined": {
+        "name": "Declined"
+      },
+      "personnel_pending": {
+        "name": "No response"
+      },
+      "personnel_present": {
+        "name": "Present"
+      },
+      "maintenance_open_total": {
+        "name": "Open maintenance total"
+      },
+      "defects_open_total": {
+        "name": "Open defects total"
+      },
+      "events_next": {
+        "name": "Next event"
+      },
+      "events_upcoming": {
+        "name": "Upcoming events"
+      },
+      "news_latest": {
+        "name": "Latest news"
+      },
+      "road_closures": {
+        "name": "Road closures"
+      }
+    },
+    "device_tracker": {
+      "alarm_position": {
+        "name": "Incident position"
+      }
+    },
+    "event": {
+      "alarm_event": {
+        "name": "Alarm event",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "neu": "New",
+              "nachalarmiert": "Reinforced",
+              "beendet": "Ended"
+            }
+          }
+        }
+      }
+    },
+    "calendar": {
+      "events_calendar": {
+        "name": "Events"
+      },
+      "reservations_all": {
+        "name": "Reservations total"
+      }
+    }
+  }
+}

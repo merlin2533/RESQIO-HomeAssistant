@@ -107,11 +107,32 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
 
         case Kind.ALARM_ACTIVE:
             return [
-                ResqioSensor(hub, slug, key, _field("keyword"), field="keyword", translation_key="keyword", icon="mdi:alert-outline"),
-                ResqioSensor(hub, slug, key, _field("category"), field="category", translation_key="category", icon="mdi:tag-outline"),
                 ResqioSensor(
-                    hub, slug, key, _field("alarm_time"), field="alarm_time",
-                    translation_key="alarm_time", device_class=SensorDeviceClass.TIMESTAMP,
+                    hub,
+                    slug,
+                    key,
+                    _field("keyword"),
+                    field="keyword",
+                    translation_key="keyword",
+                    icon="mdi:alert-outline",
+                ),
+                ResqioSensor(
+                    hub,
+                    slug,
+                    key,
+                    _field("category"),
+                    field="category",
+                    translation_key="category",
+                    icon="mdi:tag-outline",
+                ),
+                ResqioSensor(
+                    hub,
+                    slug,
+                    key,
+                    _field("alarm_time"),
+                    field="alarm_time",
+                    translation_key="alarm_time",
+                    device_class=SensorDeviceClass.TIMESTAMP,
                 ),
             ]
 
@@ -124,8 +145,13 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.ALARM_VEHICLE_COUNT:
             return [
                 ResqioSensor(
-                    hub, slug, key, _identity, translation_key="vehicles_out",
-                    state_class=SensorStateClass.MEASUREMENT, icon="mdi:fire-truck",
+                    hub,
+                    slug,
+                    key,
+                    _identity,
+                    translation_key="vehicles_out",
+                    state_class=SensorStateClass.MEASUREMENT,
+                    icon="mdi:fire-truck",
                 )
             ]
 
@@ -133,7 +159,10 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
             display = (value.name if isinstance(value, FmsValue) and value.name else None) or ident
             return [
                 ResqioSensor(
-                    hub, slug, key, _fms_label,
+                    hub,
+                    slug,
+                    key,
+                    _fms_label,
                     name=f"{display} FMS",
                     attributes=lambda v: {"fms": v.fms, "fahrzeug": v.name} if isinstance(v, FmsValue) else {},
                     icon="mdi:car-emergency",
@@ -143,16 +172,26 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.PERSONNEL if ident in PERSONNEL_METRICS:
             return [
                 ResqioSensor(
-                    hub, slug, key, _identity, translation_key=f"personnel_{ident}",
-                    state_class=SensorStateClass.MEASUREMENT, icon="mdi:account-group",
+                    hub,
+                    slug,
+                    key,
+                    _identity,
+                    translation_key=f"personnel_{ident}",
+                    state_class=SensorStateClass.MEASUREMENT,
+                    icon="mdi:account-group",
                 )
             ]
 
         case Kind.MAINTENANCE_TOTAL:
             return [
                 ResqioSensor(
-                    hub, slug, key, _identity, translation_key="maintenance_open_total",
-                    state_class=SensorStateClass.MEASUREMENT, icon="mdi:wrench-clock",
+                    hub,
+                    slug,
+                    key,
+                    _identity,
+                    translation_key="maintenance_open_total",
+                    state_class=SensorStateClass.MEASUREMENT,
+                    icon="mdi:wrench-clock",
                 )
             ]
 
@@ -160,7 +199,10 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
             category = value.get("name") if isinstance(value, dict) and value.get("name") else humanize_slug(ident)
             return [
                 ResqioSensor(
-                    hub, slug, key, _category_count,
+                    hub,
+                    slug,
+                    key,
+                    _category_count,
                     name=f"Wartungen offen: {category}",
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda _v, c=category: {"kategorie": c, "kategorie_slug": ident},
@@ -171,7 +213,11 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.EVENT_NEXT:
             return [
                 ResqioSensor(
-                    hub, slug, key, _title, translation_key="events_next",
+                    hub,
+                    slug,
+                    key,
+                    _title,
+                    translation_key="events_next",
                     attributes=lambda v: jsonable(v) if isinstance(v, dict) else {},
                     icon="mdi:calendar-star",
                 )
@@ -180,8 +226,13 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.DEFECTS_TOTAL:
             return [
                 ResqioSensor(
-                    hub, slug, key, _identity, translation_key="defects_open_total",
-                    state_class=SensorStateClass.MEASUREMENT, icon="mdi:alert-circle-outline",
+                    hub,
+                    slug,
+                    key,
+                    _identity,
+                    translation_key="defects_open_total",
+                    state_class=SensorStateClass.MEASUREMENT,
+                    icon="mdi:alert-circle-outline",
                 )
             ]
 
@@ -189,7 +240,10 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
             category = value.get("name") if isinstance(value, dict) and value.get("name") else ident
             return [
                 ResqioSensor(
-                    hub, slug, key, _named_count,
+                    hub,
+                    slug,
+                    key,
+                    _named_count,
                     name=f"Mängel offen: {category}",
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda _v, c=category: {"kategorie": c, "kategorie_id": ident},
@@ -200,7 +254,10 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.DEFECTS_SEVERITY:
             return [
                 ResqioSensor(
-                    hub, slug, key, _identity,
+                    hub,
+                    slug,
+                    key,
+                    _identity,
                     name=f"Mängel offen: {ident.capitalize()}",
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda _v: {"schweregrad": ident},
@@ -212,7 +269,10 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
             name = value.get("name") if isinstance(value, dict) and value.get("name") else humanize_slug(ident)
             return [
                 ResqioSensor(
-                    hub, slug, key, _gauge_value,
+                    hub,
+                    slug,
+                    key,
+                    _gauge_value,
                     name=f"Pegel {name}",
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda v: {
@@ -226,7 +286,11 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.NEWS_LATEST:
             return [
                 ResqioSensor(
-                    hub, slug, key, _news_title, translation_key="news_latest",
+                    hub,
+                    slug,
+                    key,
+                    _news_title,
+                    translation_key="news_latest",
                     attributes=lambda v: {"meldungen": jsonable(v)} if isinstance(v, list) else {},
                     icon="mdi:newspaper-variant-outline",
                 )
@@ -235,7 +299,11 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.EVENT_UPCOMING:
             return [
                 ResqioSensor(
-                    hub, slug, key, _as_count, translation_key="events_upcoming",
+                    hub,
+                    slug,
+                    key,
+                    _as_count,
+                    translation_key="events_upcoming",
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda v: {"veranstaltungen": jsonable(v)} if isinstance(v, list) else {},
                     icon="mdi:calendar-multiple",
@@ -245,7 +313,11 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
         case Kind.ROAD_CLOSURES:
             return [
                 ResqioSensor(
-                    hub, slug, key, _as_count, translation_key="road_closures",
+                    hub,
+                    slug,
+                    key,
+                    _as_count,
+                    translation_key="road_closures",
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda v: {"sperrungen": jsonable(v)} if isinstance(v, list) else {},
                     icon="mdi:road-variant",
@@ -254,7 +326,5 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
     return []
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-) -> None:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     await async_setup_dynamic(hass, entry, "sensor", async_add_entities, _build)

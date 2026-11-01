@@ -1,0 +1,58 @@
+blueprint:
+  name: RESQIO – Gerätehaus-Licht bei Alarm
+  description: >-
+    Schaltet Licht im Gerätehaus ein, sobald RESQIO einen Alarm meldet. Optional wird es
+    wieder ausgeschaltet, wenn der Alarm endet.
+  domain: automation
+  input:
+    alarm_sensor:
+      name: Alarm-Sensor
+      description: Binärsensor „Alarm aktiv“ der Wehr (Gerät „RESQIO <Wehr>“).
+      selector:
+        entity:
+          domain: binary_sensor
+    licht:
+      name: Licht(er)
+      selector:
+        target:
+          entity:
+            domain: light
+    licht_aus_wenn_beendet:
+      name: Licht ausschalten, wenn der Alarm endet
+      default: true
+      selector:
+        boolean: {}
+
+trigger:
+  - trigger: state
+    entity_id: !input alarm_sensor
+    from: "off"
+    to: "on"
+    id: alarm_start
+  - trigger: state
+    entity_id: !input alarm_sensor
+    from: "on"
+    to: "off"
+    id: alarm_ende
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: alarm_start
+        sequence:
+          - action: light.turn_on
+            target: !input licht
+      - conditions:
+          - condition: trigger
+            id: alarm_ende
+          - condition: template
+            value_template: "{{ use_off }}"
+        sequence:
+          - action: light.turn_off
+            target: !input licht
+  
+variables:
+  use_off: !input licht_aus_wenn_beendet
+
+mode: restart

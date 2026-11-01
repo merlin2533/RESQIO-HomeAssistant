@@ -71,11 +71,14 @@ async def _exchange_code(hass: HomeAssistant, url: str, code: str) -> Any:
     """POST {url}/api/ha-bridge/pairing/exchange. Fehler bleiben neutral."""
     session = async_get_clientsession(hass)
     try:
-        async with asyncio.timeout(HTTP_TIMEOUT_SECONDS), session.post(
-            f"{url}{PAIRING_EXCHANGE_PATH}",
-            json={"code": code},
-            headers={"Accept": "application/json"},
-        ) as response:
+        async with (
+            asyncio.timeout(HTTP_TIMEOUT_SECONDS),
+            session.post(
+                f"{url}{PAIRING_EXCHANGE_PATH}",
+                json={"code": code},
+                headers={"Accept": "application/json"},
+            ) as response,
+        ):
             if response.status == 429:
                 raise InvalidSettings("rate_limited")
             if response.status != 200:
@@ -93,9 +96,10 @@ async def _fetch_server_version(hass: HomeAssistant, url: str) -> str | None:
     """Optional und fail-open: jeder Fehler ergibt None, nie ein Abbruch der Einrichtung."""
     session = async_get_clientsession(hass)
     try:
-        async with asyncio.timeout(CAPABILITIES_TIMEOUT_SECONDS), session.get(
-            f"{url}{CAPABILITIES_PATH}", headers={"Accept": "application/json"}
-        ) as response:
+        async with (
+            asyncio.timeout(CAPABILITIES_TIMEOUT_SECONDS),
+            session.get(f"{url}{CAPABILITIES_PATH}", headers={"Accept": "application/json"}) as response,
+        ):
             if response.status != 200:
                 return None
             data = await response.json(content_type=None)

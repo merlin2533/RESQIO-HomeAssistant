@@ -1,0 +1,30 @@
+[project]
+name = "resqio-homeassistant"
+version = "0.1.0"
+description = "RESQIO-Integration für Home Assistant (reiner MQTT-Empfänger)"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+src = ["custom_components", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S", "D100", "PL"]
+ignore = [
+    "D100",  # Modul-Docstrings sind an den wichtigen Stellen vorhanden, nicht ueberall erzwungen
+    "PLR0911", "PLR0912", "PLR2004", "PLR0913",
+    "S101",  # assert in Tests
+    "S105", "S106",  # Konfigurationsschluessel mit dem Wort "password" sind keine Secrets
+    "RUF001", "RUF002", "RUF003",  # deutsche Typografie (Umlaute, Gedankenstrich) ist beabsichtigt
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "S105"]
+"custom_components/resqio/config_flow.py" = ["S105"]
+"custom_components/resqio/const.py" = ["S105"]
