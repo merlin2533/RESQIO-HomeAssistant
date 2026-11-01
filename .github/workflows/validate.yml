@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Installation
-        run: pip install ruff pytest
+        run: pip install ruff pytest pyyaml jinja2 homeassistant paho-mqtt
       - name: Ruff
         run: |
           ruff check .

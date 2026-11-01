@@ -33,6 +33,26 @@
         "data_description": {
           "departments": "The slugs of the released fire departments, e.g. hauptwache, ortsteil-nord."
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-pair RESQIO",
+        "description": "RESQIO has rejected the saved access. Create a new pairing code in RESQIO under Enterprise, Home Assistant, pair access. It is valid for 10 minutes and is used up when saved.",
+        "data": {
+          "url": "RESQIO server address",
+          "code": "Pairing code"
+        }
+      },
+      "reconfigure": {
+        "title": "Pair RESQIO again",
+        "description": "Pair again, for example after the fire department release was changed. Create a new code in RESQIO under Enterprise, Home Assistant, pair access. It is valid for 10 minutes and is used up when saved.",
+        "data": {
+          "url": "RESQIO server address",
+          "code": "Pairing code"
+        }
+      },
+      "tls_notice": {
+        "title": "Connection not encrypted",
+        "description": "The connection to the RESQIO broker is not encrypted. Access data and alarm data would travel through the network unprotected. {detail}\\n\\nOnly continue if the connection runs inside a network you trust, or ask your administrator to enable an encrypted connection."
       }
     },
     "error": {
@@ -51,7 +71,11 @@
       "unknown": "Unknown error."
     },
     "abort": {
-      "already_configured": "This access is already set up."
+      "already_configured": "This access is already set up. Its access data were updated.",
+      "reauth_successful": "Pairing renewed. RESQIO is reconnecting.",
+      "reconfigure_successful": "Pairing updated. RESQIO is reconnecting.",
+      "wrong_account": "This code belongs to a different access than the one being updated.",
+      "unknown": "Unknown error."
     }
   },
   "entity": {

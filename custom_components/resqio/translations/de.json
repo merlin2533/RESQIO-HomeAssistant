@@ -33,6 +33,26 @@
         "data_description": {
           "departments": "Die Kürzel der freigegebenen Feuerwehren, z. B. hauptwache, ortsteil-nord."
         }
+      },
+      "reauth_confirm": {
+        "title": "RESQIO neu koppeln",
+        "description": "RESQIO hat den gespeicherten Zugang abgelehnt. Erzeugen Sie in RESQIO unter Enterprise, Home Assistant, Zugang koppeln einen neuen Kopplungscode. Er ist 10 Minuten gültig und wird mit dem Speichern verbraucht.",
+        "data": {
+          "url": "Adresse des RESQIO-Servers",
+          "code": "Kopplungscode"
+        }
+      },
+      "reconfigure": {
+        "title": "RESQIO erneut koppeln",
+        "description": "Koppeln Sie erneut, zum Beispiel nachdem die Freigabe Ihrer Feuerwehr geändert wurde. Erzeugen Sie in RESQIO unter Enterprise, Home Assistant, Zugang koppeln einen neuen Code. Er ist 10 Minuten gültig und wird mit dem Speichern verbraucht.",
+        "data": {
+          "url": "Adresse des RESQIO-Servers",
+          "code": "Kopplungscode"
+        }
+      },
+      "tls_notice": {
+        "title": "Verbindung nicht verschlüsselt",
+        "description": "Die Verbindung zum RESQIO-Broker ist nicht verschlüsselt. Zugangsdaten und Alarmdaten würden ungeschützt durch das Netz laufen. {detail}\\n\\nFahren Sie nur fort, wenn die Verbindung in einem vertrauenswürdigen Netz verläuft, oder bitten Sie Ihren Administrator, eine verschlüsselte Verbindung einzurichten."
       }
     },
     "error": {
@@ -51,7 +71,11 @@
       "unknown": "Unbekannter Fehler."
     },
     "abort": {
-      "already_configured": "Dieser Zugang ist bereits eingerichtet."
+      "already_configured": "Dieser Zugang ist bereits eingerichtet. Seine Zugangsdaten wurden aktualisiert.",
+      "reauth_successful": "Kopplung erneuert. RESQIO verbindet sich neu.",
+      "reconfigure_successful": "Kopplung aktualisiert. RESQIO verbindet sich neu.",
+      "wrong_account": "Dieser Code gehört zu einem anderen Zugang als dem, der aktualisiert wird.",
+      "unknown": "Unbekannter Fehler."
     }
   },
   "entity": {

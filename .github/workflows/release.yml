@@ -1,0 +1,63 @@
+name: Release
+
+# Zaehlt bei jeder relevanten Aenderung auf main die Patch-Version hoch (0.8.0 -> 0.8.1 ...),
+# setzt das Tag vX.Y.Z und legt ein GitHub-Release mit generierten Notes an.
+# HACS erkennt neue Versionen an diesen Releases.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "custom_components/**"
+      - "blueprints/**"
+      - "lovelace/**"
+      - "hacs.json"
+      - "README.md"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Version, Tag und Release
+    runs-on: ubuntu-24.04
+    # Schutz gegen Schleifen: der Versions-Commit traegt [skip ci] und stammt vom Bot.
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Naechste Version berechnen
+        id: version
+        run: echo "value=$(python3 .github/scripts/next_version.py custom_components/resqio/manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Version eintragen und committen
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          python3 .github/scripts/set_version.py "$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add custom_components/resqio/manifest.json pyproject.toml
+            git commit -m "chore(release): v${VERSION} [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Tag setzen und Release anlegen
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+          gh release create "v${VERSION}" --title "v${VERSION}" --generate-notes --verify-tag

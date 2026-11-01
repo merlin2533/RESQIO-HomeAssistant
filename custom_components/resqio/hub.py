@@ -7,9 +7,11 @@ ueber die MQTT-Integration von Home Assistant. Sie abonniert je Wehr
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import ssl
 import threading
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -83,11 +85,20 @@ def probe_connection(settings: ConnectionSettings) -> str | None:
 class ResqioHub:
     """Haelt die Verbindung und den letzten Wert je Topic (Schluessel: Slug + Topic-Rest)."""
 
-    def __init__(self, hass: HomeAssistant, entry_id: str, settings: ConnectionSettings) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry_id: str,
+        settings: ConnectionSettings,
+        on_auth_failed: Callable[[], None] | None = None,
+    ) -> None:
         self.hass = hass
         self.entry_id = entry_id
         self.settings = settings
         self.connected = False
+        self.auth_failed = False
+        self._on_auth_failed = on_auth_failed
+        self._first_result = asyncio.Event()
         self.readings: dict[tuple[str, str], Reading] = {}
         self.last_message_at: dict[str, datetime] = {}
         self.message_count = 0
@@ -109,6 +120,14 @@ class ResqioHub:
         client.connect_async(self.settings.broker_host, self.settings.broker_port, KEEPALIVE_SECONDS)
         client.loop_start()
         self._client = client
+
+    async def async_wait_first_result(self, timeout: float) -> None:
+        """Wartet, bis der Broker die erste Verbindung angenommen oder abgelehnt hat (Zeitablauf: kein Fehler)."""
+        try:
+            async with asyncio.timeout(timeout):
+                await self._first_result.wait()
+        except TimeoutError:
+            return
 
     async def async_stop(self) -> None:
         client, self._client = self._client, None
@@ -146,10 +165,19 @@ class ResqioHub:
     def _on_connect(self, client: mqtt.Client, _userdata: Any, _flags: Any, reason: Any, _props: Any) -> None:
         if reason.is_failure:
             _LOGGER.warning("RESQIO-Broker hat die Verbindung abgelehnt (Code %s)", reason.value)
+            if reason.value in _AUTH_FAILURE_CODES:
+                # Falsche oder gesperrte Zugangsdaten werden durch Wiederholen nie richtig:
+                # Schleife beenden und die Neukopplung anstossen.
+                client.disconnect()
+                self.hass.loop.call_soon_threadsafe(self._handle_auth_failure)
             return
+        # Vor dem Abonnieren verwerfen: retained Nachrichten liefern den aktuellen Stand,
+        # alles Uebrige waere nach einer Unterbrechung veraltet.
+        self.hass.loop.call_soon_threadsafe(self._reset_readings)
         for topic_filter in self.settings.topic_filters():
             client.subscribe(topic_filter, qos=1)
         self.hass.loop.call_soon_threadsafe(self._set_connected, True)
+        self.hass.loop.call_soon_threadsafe(self._first_result.set)
 
     def _on_disconnect(self, *_args: Any) -> None:
         self.hass.loop.call_soon_threadsafe(self._set_connected, False)
@@ -167,6 +195,21 @@ class ResqioHub:
         )
 
     # ------------------------------------------------------------------ Loop-Thread
+
+    @callback
+    def _reset_readings(self) -> None:
+        self.readings.clear()
+        self.last_message_at.clear()
+        async_dispatcher_send(self.hass, signal_update(self.entry_id), None, None)
+
+    @callback
+    def _handle_auth_failure(self) -> None:
+        already = self.auth_failed
+        self.auth_failed = True
+        self._set_connected(False)
+        self._first_result.set()
+        if not already and self._on_auth_failed is not None:
+            self._on_auth_failed()
 
     @callback
     def _set_connected(self, connected: bool) -> None:

@@ -1,0 +1,92 @@
+blueprint:
+  name: RESQIO – Gerätehaus-Tor pro Fahrzeug öffnen
+  description: >-
+    Öffnet das Tor einer Fahrzeughalle, sobald das zugehörige Fahrzeug ausrückt. So öffnet sich
+    nur das Tor des Fahrzeugs, das gebraucht wird, und nicht alle Tore des Gerätehauses.
+    Legen Sie für jedes Fahrzeug bzw. jede Halle eine eigene Automation aus diesem Blueprint an.
+
+
+    **Auslöser „Fahrzeug im Einsatz“ (empfohlen):** Das Tor öffnet, sobald der Fahrzeugstatus
+    auf „Einsatzübernahme / Anfahrt“ (Status 3) wechselt und RESQIO einen aktiven Alarm meldet.
+    Dafür wählen Sie den Fahrzeugstatus-Sensor („<Fahrzeug> FMS“) des Fahrzeugs.
+
+
+    **Auslöser „Alarm aktiv“:** Das Tor öffnet bei jedem Alarm der Wehr, unabhängig vom
+    Fahrzeugstatus (wie der Blueprint „Tor öffnen bei Alarm“).
+  domain: automation
+  input:
+    fahrzeug_status:
+      name: Fahrzeugstatus-Sensor
+      description: Sensor „<Fahrzeug> FMS“ des Fahrzeugs, dessen Tor sich öffnen soll.
+      selector:
+        entity:
+          domain: sensor
+    alarm_sensor:
+      name: Alarm-Sensor
+      description: Binärsensor „Alarm aktiv“ der Wehr.
+      selector:
+        entity:
+          domain: binary_sensor
+    tore:
+      name: Tor(e) dieses Fahrzeugs
+      selector:
+        target:
+          entity:
+            domain: cover
+    ausloeser:
+      name: Auslöser
+      default: fahrzeug_im_einsatz
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - value: fahrzeug_im_einsatz
+              label: Fahrzeug im Einsatz (Status 3) bei aktivem Alarm
+            - value: alarm_aktiv
+              label: Alarm aktiv (unabhängig vom Fahrzeug)
+    verzoegerung:
+      name: Verzögerung vor dem Öffnen (Sekunden)
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: s
+          mode: slider
+
+trigger_variables:
+  fahrzeug_entity: !input fahrzeug_status
+
+variables:
+  ausloeser: !input ausloeser
+  alarm_entity: !input alarm_sensor
+  wartezeit: !input verzoegerung
+
+trigger:
+  - trigger: template
+    value_template: "{{ state_attr(fahrzeug_entity, 'fms') | int(0) == 3 }}"
+    id: fahrzeug
+  - trigger: state
+    entity_id: !input alarm_sensor
+    from: "off"
+    to: "on"
+    id: alarm
+
+condition:
+  - condition: template
+    value_template: >-
+      {{ (ausloeser == 'fahrzeug_im_einsatz' and trigger.id == 'fahrzeug' and is_state(alarm_entity, 'on'))
+         or (ausloeser == 'alarm_aktiv' and trigger.id == 'alarm') }}
+
+action:
+  - if:
+      - condition: template
+        value_template: "{{ wartezeit | int(0) > 0 }}"
+    then:
+      - delay:
+          seconds: "{{ wartezeit | int(0) }}"
+  - action: cover.open_cover
+    target: !input tore
+
+mode: single

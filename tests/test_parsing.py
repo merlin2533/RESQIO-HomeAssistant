@@ -456,3 +456,68 @@ def test_probe_client_id_differs_from_operating_id() -> None:
     probe = p.make_client_id("ha_0123456789ab", "probe")
     assert probe.startswith(p.CLIENT_ID_PREFIX)
     assert "-probe-" in probe
+
+
+# --------------------------------------------------------------------------- Reservierungen mit Namen, Tausch-Antwort
+
+
+def test_reservations_accept_object_with_name_and_items() -> None:
+    payload = {
+        "name": "  LF 10  ",
+        "items": [
+            {"id": "r1", "start": "2026-11-05T08:00:00+01:00", "end": "2026-11-05T12:00:00+01:00", "purpose": "x"}
+        ],
+    }
+    parsed = p.parse_reservations(json.dumps(payload))
+    assert parsed is not None
+    assert parsed["name"] == "LF 10"
+    assert [set(item) for item in parsed["items"]] == [{"id", "start", "end"}]
+
+
+def test_reservations_accept_plain_list_without_name() -> None:
+    payload = [{"id": "r1", "start": "2026-11-05T08:00:00+01:00", "end": "2026-11-05T12:00:00+01:00"}]
+    parsed = p.parse_reservations(json.dumps(payload))
+    assert parsed is not None and parsed["name"] is None and len(parsed["items"]) == 1
+
+
+@pytest.mark.parametrize("text", ["nope", "42", '{"name": "LF"}', '{"items": "x"}'])
+def test_reservations_reject_broken_payloads(text: str) -> None:
+    assert p.parse_reservations(text) is None
+
+
+def test_reservation_topic_value_is_object_for_both_kinds() -> None:
+    payload = {"name": "MTW", "items": []}
+    for key in ("reservations/vehicle/mtw", "reservations/all"):
+        reading = p.decode_reading(ROOT, f"{ROOT}/hauptwache/{key}", j(payload), retained=True)
+        assert reading is not None and reading.value == {"name": "MTW", "items": []}
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"tls_warning": True}, ""),
+        ({"tls_warning": "Verbindung ist unverschlüsselt"}, "Verbindung ist unverschlüsselt"),
+        ({"tls_warning": False}, None),
+        ({"tls_warning": ""}, None),
+        ({}, None),
+        ([], None),
+    ],
+)
+def test_parse_tls_warning(payload: object, expected: str | None) -> None:
+    assert p.parse_tls_warning(payload) == expected
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ({"success": True, "data": {"version": "6.12.3"}}, "6.12.3"),
+        ({"success": True, "data": {"version": 7}}, "7"),
+        ({"version": "6.12.3"}, None),  # alte Form: Version nur noch unter data
+        ({"data": {"version": True}}, None),
+        ({"data": {"version": ""}}, None),
+        ({"data": []}, None),
+        ("x", None),
+    ],
+)
+def test_parse_server_version(payload: object, expected: str | None) -> None:
+    assert p.parse_server_version(payload) == expected

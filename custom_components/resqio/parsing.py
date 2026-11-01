@@ -238,7 +238,7 @@ def parse_value(kind: Kind, text: str) -> Any:
         case Kind.EVENT_UPCOMING:
             return parse_calendar_items(text, reservation=False)
         case Kind.RESERVATIONS_ALL | Kind.RESERVATIONS_VEHICLE:
-            return parse_calendar_items(text, reservation=True)
+            return parse_reservations(text)
         case Kind.NEWS_LATEST:
             return parse_news(text)
         case Kind.ROAD_CLOSURES:
@@ -326,12 +326,15 @@ def parse_calendar_items(text: str, *, reservation: bool) -> list[dict[str, Any]
     """Listen-Topic (Veranstaltungen oder Reservierungen). Hoechstens MAX_LIST_ITEMS Eintraege.
 
     Reservierungen werden auf id/start/end reduziert: keine Namen, kein Zweck.
-    Eintraege ohne gueltigen Zeitraum fallen weg.
+    Eintraege ohne gueltigen Zeitraum fallen weg. Bei Reservierungen darf die Liste auch in einem
+    Objekt `{"name": ..., "items": [...]}` stehen.
     """
     try:
         data = json.loads(text)
     except ValueError:
         return None
+    if reservation and isinstance(data, dict):
+        data = data.get("items")
     if not isinstance(data, list):
         return None
     items: list[dict[str, Any]] = []
@@ -351,6 +354,25 @@ def parse_calendar_items(text: str, *, reservation: bool) -> list[dict[str, Any]
         if len(items) >= MAX_LIST_ITEMS:
             break
     return items
+
+
+def parse_reservations(text: str) -> dict[str, Any] | None:
+    """Reservierungen als `{"name": str | None, "items": [...]}`.
+
+    Akzeptiert die Liste (bisheriges Format) oder ein Objekt `{"name": ..., "items": [...]}`.
+    Der Name ist optional und nur ein Anzeigename des Fahrzeugs.
+    """
+    items = parse_calendar_items(text, reservation=True)
+    if items is None:
+        return None
+    name: str | None = None
+    try:
+        data = json.loads(text)
+    except ValueError:
+        data = None
+    if isinstance(data, dict):
+        name = _short(_clean_text(str(data.get("name") or "")), 100)
+    return {"name": name, "items": items}
 
 
 def parse_news(text: str) -> list[dict[str, Any]] | None:
@@ -553,6 +575,32 @@ def parse_pairing_response(payload: Any, server_url: str) -> ConnectionSettings:
     if not isinstance(payload, dict):
         raise InvalidSettings("invalid_response")
     return build_settings(payload, server_url=server_url)
+
+
+def parse_tls_warning(payload: Any) -> str | None:
+    """Hinweis des Servers auf eine unverschluesselte Verbindung (`tls_warning`).
+
+    Liefert None ohne Warnung, sonst den Hinweistext (leer, wenn der Server nur `true` meldet).
+    """
+    if not isinstance(payload, dict):
+        return None
+    warning = payload.get("tls_warning")
+    if warning is True:
+        return ""
+    if isinstance(warning, str) and warning.strip():
+        return _short(_clean_text(warning), 300) or ""
+    return None
+
+
+def parse_server_version(payload: Any) -> str | None:
+    """Version aus der Antwort `{"success": true, "data": {"version": "..."}}`. Fail-open: sonst None."""
+    if not isinstance(payload, dict):
+        return None
+    data = payload.get("data")
+    version = data.get("version") if isinstance(data, dict) else None
+    if isinstance(version, bool) or not isinstance(version, (str, int)):
+        return None
+    return str(version).strip()[:32] or None
 
 
 def parse_departments_text(text: str) -> tuple[Department, ...]:

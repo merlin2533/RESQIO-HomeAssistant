@@ -2,7 +2,9 @@ blueprint:
   name: RESQIO – Tor öffnen bei Alarm
   description: >-
     Öffnet ein Gerätehaus-Tor, sobald RESQIO einen Alarm meldet. Optional mit Verzögerung,
-    damit die Einsatzkräfte vorher das Tor-Umfeld prüfen können.
+    damit die Einsatzkräfte vorher das Tor-Umfeld prüfen können. Öffnet bei jedem Alarm der
+    Wehr alle gewählten Tore. Soll nur das Tor des ausrückenden Fahrzeugs öffnen, nutzen Sie
+    den Blueprint „Gerätehaus-Tor pro Fahrzeug öffnen“.
   domain: automation
   input:
     alarm_sensor:

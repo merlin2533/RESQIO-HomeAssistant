@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 
 from .hub import ResqioHub
 from .parsing import ConnectionSettings, InvalidSettings
+
+FIRST_CONNECT_WAIT_SECONDS = 10
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -27,7 +29,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry[ResqioHub]) 
     except InvalidSettings as err:
         raise ConfigEntryError(f"Gespeicherte Zugangsdaten sind ungueltig ({err.key})") from err
 
-    hub = ResqioHub(hass, entry.entry_id, settings)
+    def _start_reauth() -> None:
+        # Nach dem Setup: Anmeldeablehnung im laufenden Betrieb fuehrt zur Neukopplung.
+        if entry.state is not ConfigEntryState.SETUP_IN_PROGRESS:
+            entry.async_start_reauth(hass)
+
+    hub = ResqioHub(hass, entry.entry_id, settings, on_auth_failed=_start_reauth)
     entry.runtime_data = hub
 
     # Erst die Plattformen registrieren, dann verbinden: retained Nachrichten
@@ -35,6 +42,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry[ResqioHub]) 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await hub.async_start()
     entry.async_on_unload(hub.async_stop)
+
+    # Beim ersten Verbinden kurz auf die Antwort des Brokers warten: lehnt er die Anmeldung ab,
+    # meldet Home Assistant das als Anmeldeproblem (Neukopplung) statt endlos zu wiederholen.
+    await hub.async_wait_first_result(FIRST_CONNECT_WAIT_SECONDS)
+    if hub.auth_failed:
+        await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+        raise ConfigEntryAuthFailed("Der RESQIO-Zugang wurde abgelehnt. Bitte neu koppeln.")
     return True
 
 

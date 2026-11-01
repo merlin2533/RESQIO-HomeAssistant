@@ -2,7 +2,8 @@ blueprint:
   name: RESQIO – Ansage mit Stichwort
   description: >-
     Spricht das Einsatzstichwort über einen Lautsprecher oder ein Display an, sobald
-    RESQIO das Stichwort meldet. Nur während eines aktiven Alarms.
+    RESQIO das Stichwort meldet. Nur während eines aktiven Alarms. Geeignet für das Gerätehaus
+    ebenso wie für zu Hause, solange Ihr Zugang die Alarmdaten Ihrer Feuerwehr enthält.
   domain: automation
   input:
     stichwort_sensor:

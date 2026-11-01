@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from dataclasses import replace
 from typing import Any
 
 import voluptuous as vol
 from aiohttp import ClientError
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_RECONFIGURE, ConfigFlow, ConfigFlowResult
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv  # noqa: F401 - Selektoren laden
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -39,17 +40,23 @@ from .parsing import (
     normalize_server_url,
     parse_departments_text,
     parse_pairing_response,
+    parse_server_version,
+    parse_tls_warning,
 )
 
 HTTP_TIMEOUT_SECONDS = 15
 CAPABILITIES_TIMEOUT_SECONDS = 5
 
-PAIRING_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_URL): TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
-        vol.Required(CONF_CODE): TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT)),
-    }
-)
+
+def _pairing_schema(default_url: str | None = None) -> vol.Schema:
+    url_key = vol.Required(CONF_URL, default=default_url) if default_url else vol.Required(CONF_URL)
+    return vol.Schema(
+        {
+            url_key: TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
+            vol.Required(CONF_CODE): TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT)),
+        }
+    )
+
 
 MANUAL_SCHEMA = vol.Schema(
     {
@@ -105,32 +112,33 @@ async def _fetch_server_version(hass: HomeAssistant, url: str) -> str | None:
             data = await response.json(content_type=None)
     except (ClientError, TimeoutError, OSError, ValueError):
         return None
-    version = data.get("version") if isinstance(data, dict) else None
-    return str(version)[:32] if isinstance(version, (str, int)) else None
+    return parse_server_version(data)
 
 
 class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    def __init__(self) -> None:
+        # Der Code ist nur einmal gueltig. Das Ergebnis des Tauschs bleibt deshalb im Flow, damit
+        # eine fehlgeschlagene Broker-Pruefung ohne neuen Code wiederholt werden kann.
+        self._exchanged: tuple[str, str, ConnectionSettings, str | None] | None = None
+        self._pending: ConnectionSettings | None = None
+        self._tls_detail = ""
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self.async_show_menu(step_id="user", menu_options=["pairing", "manual"])
 
     async def async_step_pairing(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            try:
-                url = normalize_server_url(user_input[CONF_URL])
-                code = normalize_pairing_code(user_input[CONF_CODE])
-                payload = await _exchange_code(self.hass, url, code)
-                settings = parse_pairing_response(payload, url)
-                version = await _fetch_server_version(self.hass, url)
-                settings = replace(settings, server_version=version)
-                await self._async_check_connection(settings)
-            except InvalidSettings as err:
-                errors["base"] = err.key
-            else:
-                return await self._async_create(settings)
-        return self.async_show_form(step_id="pairing", data_schema=PAIRING_SCHEMA, errors=errors)
+        return await self._async_pairing_step("pairing", user_input)
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._async_pairing_step("reauth_confirm", user_input)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._async_pairing_step("reconfigure", user_input)
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -148,8 +156,65 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
             except InvalidSettings as err:
                 errors["base"] = err.key
             else:
-                return await self._async_create(settings)
+                return await self._async_complete(settings)
         return self.async_show_form(step_id="manual", data_schema=MANUAL_SCHEMA, errors=errors)
+
+    async def async_step_tls_notice(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Hinweis auf eine unverschluesselte Verbindung; erst nach Bestaetigung wird gespeichert."""
+        if self._pending is None:
+            return self.async_abort(reason="unknown")
+        if user_input is not None:
+            return await self._async_complete(self._pending)
+        return self.async_show_form(
+            step_id="tls_notice",
+            data_schema=vol.Schema({}),
+            description_placeholders={"detail": self._tls_detail},
+        )
+
+    async def _async_pairing_step(self, step_id: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                settings, warning = await self._async_pair(user_input)
+            except InvalidSettings as err:
+                errors["base"] = err.key
+            else:
+                if warning is not None:
+                    self._pending = settings
+                    self._tls_detail = warning
+                    return await self.async_step_tls_notice()
+                return await self._async_complete(settings)
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=_pairing_schema(self._known_server_url()),
+            errors=errors,
+        )
+
+    def _known_server_url(self) -> str | None:
+        """Bei Neukopplung und Umkonfiguration ist die bisherige Adresse vorbelegt."""
+        if self.source == SOURCE_REAUTH:
+            entry = self._get_reauth_entry()
+        elif self.source == SOURCE_RECONFIGURE:
+            entry = self._get_reconfigure_entry()
+        else:
+            return None
+        url = entry.data.get("server_url")
+        return url if isinstance(url, str) and url else None
+
+    async def _async_pair(self, user_input: dict[str, Any]) -> tuple[ConnectionSettings, str | None]:
+        url = normalize_server_url(user_input[CONF_URL])
+        code = normalize_pairing_code(user_input[CONF_CODE])
+        cached = self._exchanged
+        if cached is not None and cached[0] == url and cached[1] == code:
+            _, _, settings, warning = cached
+        else:
+            payload = await _exchange_code(self.hass, url, code)
+            settings = parse_pairing_response(payload, url)
+            settings = replace(settings, server_version=await _fetch_server_version(self.hass, url))
+            warning = parse_tls_warning(payload)
+            self._exchanged = (url, code, settings, warning)
+        await self._async_check_connection(settings)
+        return settings, warning
 
     async def _async_check_connection(self, settings: ConnectionSettings) -> None:
         """Prueft Erreichbarkeit und Login gegen den Broker, bevor etwas gespeichert wird."""
@@ -157,8 +222,23 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
         if error is not None:
             raise InvalidSettings(error)
 
-    async def _async_create(self, settings: ConnectionSettings) -> ConfigFlowResult:
+    async def _async_complete(self, settings: ConnectionSettings) -> ConfigFlowResult:
+        """Legt den Eintrag an oder aktualisiert den bestehenden (Neukopplung, Umkonfiguration)."""
         await self.async_set_unique_id(settings.username)
-        self._abort_if_unique_id_configured()
         names = ", ".join(dept.name for dept in settings.departments)
-        return self.async_create_entry(title=f"RESQIO {names}", data=settings.to_entry_data())
+        title = f"RESQIO {names}"
+        data = settings.to_entry_data()
+        if self.source == SOURCE_REAUTH:
+            self._abort_if_unique_id_mismatch(reason="wrong_account")
+            return self.async_update_reload_and_abort(
+                self._get_reauth_entry(), data=data, title=title, reason="reauth_successful"
+            )
+        if self.source == SOURCE_RECONFIGURE:
+            self._abort_if_unique_id_mismatch(reason="wrong_account")
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(), data=data, title=title, reason="reconfigure_successful"
+            )
+        # Erneutes Koppeln desselben Zugangs: Zugangsdaten im bestehenden Eintrag aktualisieren.
+        updates = {key: value for key, value in data.items() if value is not None or key == "ca_pem"}
+        self._abort_if_unique_id_configured(updates=updates)
+        return self.async_create_entry(title=title, data=data)

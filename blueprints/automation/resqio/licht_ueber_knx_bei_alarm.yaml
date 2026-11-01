@@ -1,0 +1,116 @@
+blueprint:
+  name: RESQIO – Licht über KNX bei Alarm
+  description: >-
+    Schaltet bei Alarm das Licht im Gerätehaus über Ihre KNX-Anlage ein. Home Assistant nutzt
+    dafür die KNX-Integration von Home Assistant; RESQIO selbst spricht nicht mit KNX.
+
+
+    Sie können KNX-Lichter (Entitäten der KNX-Integration) und/oder KNX-Gruppenadressen
+    angeben. Gruppenadressen werden mit dem Dienst „knx.send“ als Schalt-Telegramm gesendet
+    (1 = ein, 0 = aus), zum Beispiel `1/0/1`.
+  domain: automation
+  input:
+    alarm_sensor:
+      name: Alarm-Sensor
+      description: Binärsensor „Alarm aktiv“ der Wehr (Gerät „RESQIO <Wehr>“).
+      selector:
+        entity:
+          domain: binary_sensor
+    knx_licht:
+      name: KNX-Licht(er)
+      description: Lichter der KNX-Integration. Leer lassen, wenn Sie nur Gruppenadressen nutzen.
+      default: {}
+      selector:
+        target:
+          entity:
+            domain: light
+    gruppenadressen:
+      name: KNX-Gruppenadresse(n) zum Schalten
+      description: >-
+        Mehrere Adressen mit Komma trennen, zum Beispiel 1/0/1, 1/0/2. Leer lassen, wenn Sie nur
+        Lichter angeben.
+      default: ""
+      selector:
+        text: {}
+    helligkeit:
+      name: Helligkeit der Lichter (Prozent)
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    licht_aus_wenn_beendet:
+      name: Licht ausschalten, wenn der Alarm endet
+      default: false
+      selector:
+        boolean: {}
+
+variables:
+  licht_ziel: !input knx_licht
+  adressen_text: !input gruppenadressen
+  aus_bei_ende: !input licht_aus_wenn_beendet
+  helligkeit_prozent: !input helligkeit
+  adressen: >-
+    {{ adressen_text.split(',') | map('trim') | reject('equalto', '') | list }}
+
+trigger:
+  - trigger: state
+    entity_id: !input alarm_sensor
+    from: "off"
+    to: "on"
+    id: alarm_start
+  - trigger: state
+    entity_id: !input alarm_sensor
+    from: "on"
+    to: "off"
+    id: alarm_ende
+
+condition:
+  - condition: template
+    value_template: "{{ trigger.id == 'alarm_start' or aus_bei_ende }}"
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: alarm_start
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ licht_ziel | length > 0 }}"
+            then:
+              - action: light.turn_on
+                target: !input knx_licht
+                data:
+                  brightness_pct: "{{ helligkeit_prozent | int(100) }}"
+          - if:
+              - condition: template
+                value_template: "{{ adressen | length > 0 }}"
+            then:
+              - action: knx.send
+                data:
+                  address: "{{ adressen }}"
+                  payload: 1
+      - conditions:
+          - condition: trigger
+            id: alarm_ende
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ licht_ziel | length > 0 }}"
+            then:
+              - action: light.turn_off
+                target: !input knx_licht
+          - if:
+              - condition: template
+                value_template: "{{ adressen | length > 0 }}"
+            then:
+              - action: knx.send
+                data:
+                  address: "{{ adressen }}"
+                  payload: 0
+
+mode: restart

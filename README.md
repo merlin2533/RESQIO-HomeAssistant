@@ -1,27 +1,55 @@
-# RESQIO für Home Assistant
+<div align="center">
 
+<img src="https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/custom_components/resqio/brand/icon@2x.png" alt="RESQIO" width="140">
+
+# RESQIO Home Assistant Integration
+
+**Alarm, Fahrzeugstatus und mehr aus Ihrer Feuerwehr direkt in Home Assistant.**
+
+[![Release](https://img.shields.io/github/v/release/merlin2533/RESQIO-HomeAssistant?label=Release)](https://github.com/merlin2533/RESQIO-HomeAssistant/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=homeassistantcommunitystore&logoColor=white)](https://hacs.xyz)
+[![Lizenz Apache-2.0](https://img.shields.io/badge/Lizenz-Apache--2.0-blue)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-unterst%C3%BCtzen-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/merlin2533)
 
-Zeigt in Home Assistant, was in Ihrer Feuerwehr gerade los ist: **Alarm mit Stichwort und Uhrzeit**, Fahrzeugstatus, offene Wartungen und Mängel, Veranstaltungen, Fahrzeugreservierungen und mehr. Damit lösen Sie zum Beispiel aus:
+[![In HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=merlin2533&repository=RESQIO-HomeAssistant&category=integration)
 
-- das Licht im Gerätehaus schaltet sich bei Alarm ein,
-- eine Sprachansage nennt das Einsatzstichwort,
-- Tore öffnen sich automatisch.
+</div>
+
+---
+
+## Was ist das?
+
+Die Integration zeigt in Home Assistant, was in Ihrer Feuerwehr gerade los ist: **Alarm mit Stichwort und Uhrzeit**, Fahrzeugstatus, offene Wartungen und Mängel, Veranstaltungen, Fahrzeugreservierungen und mehr. Daraus bauen Sie Automationen, Ansagen und Dashboards.
 
 Die Integration **liest nur**. Sie ändert nichts in RESQIO und löst keine Alarme aus.
 
+## Anwendungsfälle
+
+### Im Feuerwehrhaus
+
+| Was passiert | Wie |
+|---|---|
+| **Fahrzeugtore öffnen bei Alarm**, pro Fahrzeug | Blueprint *Gerätehaus-Tor pro Fahrzeug öffnen*: Es öffnet nur das Tor des Fahrzeugs, das ausrückt. Alternativ öffnen alle Tore bei jedem Alarm. |
+| **Licht an über KNX** | Blueprint *Licht über KNX bei Alarm*: schaltet KNX-Lichter oder Gruppenadressen über die KNX-Integration von Home Assistant. |
+| **Ansage mit Einsatzstichwort** | Blueprint *Ansage mit Stichwort*: Ein Lautsprecher nennt das Stichwort. |
+| **Anzeige im Dashboard** | Beispielkarte `lovelace/resqio-alarm-card.yaml`: Alarm, Stichwort, Einsatzort und Fahrzeugstatus auf einem Wandtablet. |
+| **Hinweis bei Wartung und Mängeln** | Die Anzahl offener Wartungen und Mängel steht als Sensor bereit, zum Beispiel für eine Benachrichtigung oder eine Ampel im Hausflur. |
+
+### Zu Hause
+
+- **Licht oder Ansage bei einem Alarm Ihrer Feuerwehr**, zum Beispiel das Flurlicht oder eine Durchsage, damit Sie den Alarm sicher bemerken.
+- Hinweis: Eine **persönliche Anbindung** (nur Ihr eigener Alarm) folgt später. Derzeit erhalten Sie den Zugang **pro Feuerwehr**. Sie sehen also die Alarme der freigegebenen Feuerwehr.
+
 ## Das brauchen Sie
 
-- Home Assistant 2024.10 oder neuer
+- Home Assistant 2024.11 oder neuer
 - Einen RESQIO-Zugang für Ihre Feuerwehr. Ihr Administrator legt ihn in RESQIO unter **Enterprise → Home Assistant** an und bestimmt dort, welche Daten Sie sehen.
 
 ## Installation über HACS
 
 HACS ist der Store für zusätzliche Integrationen in Home Assistant. Ist HACS bei Ihnen noch nicht installiert, finden Sie die Anleitung auf [hacs.xyz](https://hacs.xyz/docs/use/download/download/).
 
-**Schnellweg:** Dieser Knopf öffnet die Integration direkt in Ihrem HACS:
-
-[![In HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=merlin2533&repository=RESQIO-HomeAssistant&category=integration)
+**Schnellweg:** Der Knopf oben öffnet die Integration direkt in Ihrem HACS.
 
 **Oder von Hand:**
 
@@ -31,11 +59,9 @@ HACS ist der Store für zusätzliche Integrationen in Home Assistant. Ist HACS b
 4. **RESQIO** in HACS suchen und auf **Herunterladen** klicken.
 5. Home Assistant **neu starten** (*Einstellungen → System → Neu starten*).
 
-**Updates:** HACS meldet neue Versionen selbst. Sie installieren sie mit einem Klick auf **Aktualisieren** und starten Home Assistant danach neu.
-
 **Ohne HACS:** Den Ordner `custom_components/resqio` aus diesem Repository in den Ordner `custom_components` Ihrer Home-Assistant-Installation kopieren und neu starten.
 
-## Einrichtung
+## Einrichtung mit Kopplungscode
 
 1. In RESQIO unter **Enterprise → Home Assistant** den Zugang öffnen und **Zugang koppeln** wählen. Es erscheint ein Code, der 10 Minuten gültig ist.
 2. In Home Assistant: **Einstellungen → Geräte & Dienste → Integration hinzufügen → RESQIO**.
@@ -44,6 +70,8 @@ HACS ist der Store für zusätzliche Integrationen in Home Assistant. Ist HACS b
 Der Code funktioniert nur einmal. Wenn etwas schiefgeht, erzeugen Sie in RESQIO einfach einen neuen.
 
 Haben Sie mehrere Feuerwehren freigegeben, erscheint für jede ein eigenes Gerät.
+
+**Neu koppeln:** Hat Ihr Administrator den Zugang gesperrt oder erneuert, meldet Home Assistant das als Reparaturhinweis. Dort geben Sie einen neuen Code ein. Auch nach einer geänderten Freigabe können Sie jederzeit neu koppeln: *Geräte & Dienste → RESQIO → ⋮ → Neu konfigurieren*.
 
 ## Was Sie sehen
 
@@ -60,31 +88,42 @@ Ihr Administrator wählt in RESQIO, welche Daten gesendet werden. Nicht freigege
 | Reservierungen | Kalender je Fahrzeug und für die ganze Wehr |
 | Weiteres | Pegelstände, Neuigkeiten, Straßensperren |
 
-Alarmdaten verschwinden wieder, sobald der Einsatz beendet ist, spätestens nach zwei Stunden.
+## Blueprints
 
-## Fertige Automationen
+Blueprints sind fertige Automationen. Sie werden **nicht automatisch** installiert. Mit einem Klick importieren Sie die gewünschten in Ihr Home Assistant:
 
-Unter **Einstellungen → Automatisierungen → Blueprints** finden Sie:
+| Blueprint | Import |
+|---|---|
+| Gerätehaus-Tor pro Fahrzeug öffnen | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/geraetehaus_tor_pro_fahrzeug.yaml) |
+| Tor öffnen bei Alarm | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/tor_oeffnen_bei_alarm.yaml) |
+| Gerätehaus-Licht bei Alarm | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/geraetehaus_licht_bei_alarm.yaml) |
+| Licht über KNX bei Alarm | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/licht_ueber_knx_bei_alarm.yaml) |
+| Ansage mit Stichwort | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/ansage_mit_stichwort.yaml) |
 
-- **Gerätehaus-Licht bei Alarm**
-- **Ansage mit Stichwort**
-- **Tor öffnen bei Alarm**
+Nach dem Import finden Sie sie unter **Einstellungen → Automatisierungen & Szenen → Blueprints**.
+
+**Hinweis zu KNX:** Home Assistant steuert Ihre KNX-Anlage über die KNX-Integration von Home Assistant. Diese müssen Sie dort einrichten. RESQIO spricht nicht selbst mit KNX.
 
 Eine Beispielkarte für Ihr Dashboard liegt in `lovelace/resqio-alarm-card.yaml`.
 
 ## Datenschutz
 
-- Es werden **keine Namen von Personen** übertragen. Beim Personal gibt es nur Zahlen, Reservierungen zeigen nur den Zeitraum.
-- Einsatzort und Alarmtext können sensible Angaben enthalten. Diese Bereiche sind deshalb standardmäßig aus und müssen von Ihrem Administrator ausdrücklich freigegeben werden.
+- **Personenbezogene Felder werden nicht übertragen.** Beim Personal gibt es nur Zahlen, Reservierungen zeigen nur den Zeitraum.
+- Freitexte wie Titel, Kurztext, Einsatzort und Alarmtext **können Namen enthalten**. Diese Bereiche sind deshalb standardmäßig aus und müssen von Ihrem Administrator ausdrücklich freigegeben werden.
+- Alarmdaten verschwinden standardmäßig **2 Stunden nach der letzten (Nach-)Alarmierung**, bei Einsatzende früher. Die Frist ist einstellbar.
 - Nutzen Sie Home Assistant Cloud (Nabu Casa) oder andere Cloud-Dienste, können die Daten darüber zu Dritten gelangen.
 - Ihr Administrator kann den Zugang in RESQIO jederzeit sperren oder neu koppeln. Geben Sie ein Gerät ab oder verkaufen es, lassen Sie den Zugang sperren.
 
-## Hilfe bei Problemen
+## Updates
+
+Neue Versionen erscheinen automatisch als **Release** in diesem Repository (Versionsnummer `0.8.x` und höher, jede Änderung zählt hoch). HACS meldet sie selbst: Sie klicken auf **Aktualisieren** und starten Home Assistant danach neu.
+
+## Hilfe
 
 - **Verbindung klappt nicht:** Stimmen Adresse und Code? Ist der Server aus Ihrem Netz erreichbar? Im Zweifel in RESQIO einen neuen Code erzeugen.
-- **Zugang abgelehnt:** Ihr Administrator hat ihn eventuell gesperrt. Neu koppeln lassen.
-- **Es fehlen Angaben:** Der Administrator muss den jeweiligen Bereich in RESQIO freigeben.
-- **Weiterhin Probleme:** *Geräte & Dienste → RESQIO → Diagnosedaten herunterladen* und an Ihren Administrator weitergeben. Zugangsdaten sind darin entfernt.
+- **Zugang abgelehnt:** Ihr Administrator hat ihn eventuell gesperrt oder erneuert. Home Assistant bietet dann **Neu koppeln** an (neuer Code).
+- **Es fehlen Angaben:** Der Administrator muss den jeweiligen Bereich in RESQIO freigeben. Danach hilft *Neu konfigurieren*.
+- **Weiterhin Probleme:** *Geräte & Dienste → RESQIO → Diagnosedaten herunterladen* und an Ihren Administrator weitergeben. Zugangsdaten sind darin entfernt. Fehler melden Sie unter [Issues](https://github.com/merlin2533/RESQIO-HomeAssistant/issues).
 
 ## Lizenz
 

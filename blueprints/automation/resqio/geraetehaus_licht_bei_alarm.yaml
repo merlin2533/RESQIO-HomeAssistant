@@ -2,7 +2,8 @@ blueprint:
   name: RESQIO – Gerätehaus-Licht bei Alarm
   description: >-
     Schaltet Licht im Gerätehaus ein, sobald RESQIO einen Alarm meldet. Optional wird es
-    wieder ausgeschaltet, wenn der Alarm endet.
+    wieder ausgeschaltet, wenn der Alarm endet. Haben Sie eine KNX-Anlage, nutzen Sie den
+    Blueprint „Licht über KNX bei Alarm“.
   domain: automation
   input:
     alarm_sensor:
