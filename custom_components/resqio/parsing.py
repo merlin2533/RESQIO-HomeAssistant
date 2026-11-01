@@ -22,7 +22,7 @@ DEFAULT_TOPIC_ROOT = "HomeAssistant"
 # HA verwirft States mit mehr als 255 Zeichen.
 MAX_STATE_LENGTH = 255
 
-# Klartext der FMS-Status (Quelle: RESQIO src/types/index.ts, FMS_STATUS_LABELS).
+# Klartext der FMS-Status.
 FMS_LABELS: dict[int, str] = {
     1: "Einsatzbereit über Funk",
     2: "Einsatzbereit auf Wache",
