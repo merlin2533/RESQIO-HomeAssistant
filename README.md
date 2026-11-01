@@ -15,11 +15,25 @@ Die Integration **liest nur**. Sie ändert nichts in RESQIO und löst keine Alar
 - Home Assistant 2024.10 oder neuer
 - Einen RESQIO-Zugang für Ihre Feuerwehr. Ihr Administrator legt ihn in RESQIO unter **Enterprise → Home Assistant** an und bestimmt dort, welche Daten Sie sehen.
 
-## Installation
+## Installation über HACS
 
-1. In Home Assistant **HACS** öffnen → **Benutzerdefinierte Repositories** → Adresse dieses Repositorys eintragen, Kategorie **Integration**.
-2. **RESQIO** suchen und installieren.
-3. Home Assistant neu starten.
+HACS ist der Store für zusätzliche Integrationen in Home Assistant. Ist HACS bei Ihnen noch nicht installiert, finden Sie die Anleitung auf [hacs.xyz](https://hacs.xyz/docs/use/download/download/).
+
+**Schnellweg:** Dieser Knopf öffnet die Integration direkt in Ihrem HACS:
+
+[![In HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=merlin2533&repository=RESQIO-HomeAssistant&category=integration)
+
+**Oder von Hand:**
+
+1. In Home Assistant **HACS** öffnen.
+2. Oben rechts auf die drei Punkte → **Benutzerdefinierte Repositories**.
+3. Als Adresse `https://github.com/merlin2533/RESQIO-HomeAssistant` eintragen, als Kategorie **Integration** wählen, auf **Hinzufügen** klicken.
+4. **RESQIO** in HACS suchen und auf **Herunterladen** klicken.
+5. Home Assistant **neu starten** (*Einstellungen → System → Neu starten*).
+
+**Updates:** HACS meldet neue Versionen selbst. Sie installieren sie mit einem Klick auf **Aktualisieren** und starten Home Assistant danach neu.
+
+**Ohne HACS:** Den Ordner `custom_components/resqio` aus diesem Repository in den Ordner `custom_components` Ihrer Home-Assistant-Installation kopieren und neu starten.
 
 ## Einrichtung
 
