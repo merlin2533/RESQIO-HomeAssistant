@@ -86,6 +86,10 @@ Eine Beispielkarte für Ihr Dashboard liegt in `lovelace/resqio-alarm-card.yaml`
 - **Es fehlen Angaben:** Der Administrator muss den jeweiligen Bereich in RESQIO freigeben.
 - **Weiterhin Probleme:** *Geräte & Dienste → RESQIO → Diagnosedaten herunterladen* und an Ihren Administrator weitergeben. Zugangsdaten sind darin entfernt.
 
+## Lizenz
+
+Kostenlos nutzbar und veränderbar (MIT-Lizenz, siehe `LICENSE`). Bedingung: Der Hinweis auf **RESQIO** und dieses Repository muss in Kopien und abgeleiteten Werken erhalten bleiben.
+
 ## Unterstützen
 
 Die Integration ist kostenlos. Wenn sie Ihnen hilft und Sie die Weiterentwicklung unterstützen möchten, freue ich mich über einen Kaffee:
