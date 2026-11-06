@@ -56,6 +56,7 @@
       }
     },
     "error": {
+      "insecure_url": "Unencrypted http is only allowed for servers in the local network. Please use https.",
       "pairing_failed": "Pairing failed. Please check the server address and code.",
       "rate_limited": "Too many attempts. Please try again later.",
       "cannot_connect": "The server or broker cannot be reached.",

@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: "0 5 * * 1"
 
+permissions:
+  contents: read
+
 jobs:
   hassfest:
     name: Hassfest
@@ -41,3 +44,16 @@ jobs:
           ruff format --check .
       - name: pytest
         run: pytest -q
+
+  audit:
+    name: Abhaengigkeiten pruefen (pip-audit)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit -r <(python3 -c 'import json;print("\n".join(json.load(open("custom_components/resqio/manifest.json"))["requirements"]))')

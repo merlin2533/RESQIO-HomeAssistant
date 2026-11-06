@@ -521,3 +521,23 @@ def test_parse_tls_warning(payload: object, expected: str | None) -> None:
 )
 def test_parse_server_version(payload: object, expected: str | None) -> None:
     assert p.parse_server_version(payload) == expected
+
+
+@pytest.mark.parametrize(
+    ("url", "insecure"),
+    [
+        ("http://resqio.example.de", True),
+        ("https://resqio.example.de", False),
+        ("http://192.168.1.5:3000", False),
+        ("http://localhost:3000", False),
+        ("http://resqio", False),
+        ("http://8.8.8.8", True),
+    ],
+)
+def test_is_insecure_remote_url(url: str, insecure: bool) -> None:
+    assert p.is_insecure_remote_url(url) is insecure
+
+
+def test_vehicle_ident_is_validated() -> None:
+    assert p.classify_path(("vehicles", "bad id", "fms")) is None
+    assert p.classify_path(("reservations", "vehicle", "x" * 65)) is None

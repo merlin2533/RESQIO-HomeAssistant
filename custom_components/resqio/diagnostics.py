@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from .const import CONF_CA_PEM
 from .hub import ResqioHub
 
-TO_REDACT = {"password", "username", CONF_CA_PEM}
+TO_REDACT = {"password", "username", "broker_host", "server_url", CONF_CA_PEM}
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry[ResqioHub]) -> dict[str, Any]:

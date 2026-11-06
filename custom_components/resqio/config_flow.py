@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Mapping
 from dataclasses import replace
 from typing import Any
@@ -27,7 +28,7 @@ from .const import (
     CAPABILITIES_PATH,
     CONF_CODE,
     CONF_URL,
-    DEFAULT_BROKER_PORT,
+    DEFAULT_BROKER_PORT_TLS,
     DOMAIN,
     PAIRING_EXCHANGE_PATH,
 )
@@ -36,6 +37,7 @@ from .parsing import (
     ConnectionSettings,
     InvalidSettings,
     build_settings,
+    is_insecure_remote_url,
     normalize_pairing_code,
     normalize_server_url,
     parse_departments_text,
@@ -45,6 +47,7 @@ from .parsing import (
 )
 
 HTTP_TIMEOUT_SECONDS = 15
+MAX_RESPONSE_BYTES = 65536
 CAPABILITIES_TIMEOUT_SECONDS = 5
 
 
@@ -61,10 +64,10 @@ def _pairing_schema(default_url: str | None = None) -> vol.Schema:
 MANUAL_SCHEMA = vol.Schema(
     {
         vol.Required("broker_host"): TextSelector(),
-        vol.Required("broker_port", default=DEFAULT_BROKER_PORT): NumberSelector(
+        vol.Required("broker_port", default=DEFAULT_BROKER_PORT_TLS): NumberSelector(
             NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
         ),
-        vol.Required("broker_tls", default=False): BooleanSelector(),
+        vol.Required("broker_tls", default=True): BooleanSelector(),
         vol.Required("username"): TextSelector(),
         vol.Required("password"): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
         vol.Required("topic_root", default="HomeAssistant"): TextSelector(),
@@ -72,6 +75,18 @@ MANUAL_SCHEMA = vol.Schema(
         vol.Optional("ca_pem"): TextSelector(TextSelectorConfig(multiline=True)),
     }
 )
+
+
+async def _read_json(response: Any) -> Any:
+    """Liest eine JSON-Antwort mit Groessenlimit."""
+    if response.content_length is not None and response.content_length > MAX_RESPONSE_BYTES:
+        raise ValueError("response too large")
+    raw = bytearray()
+    async for chunk in response.content.iter_chunked(8192):
+        raw.extend(chunk)
+        if len(raw) > MAX_RESPONSE_BYTES:
+            raise ValueError("response too large")
+    return json.loads(raw)
 
 
 async def _exchange_code(hass: HomeAssistant, url: str, code: str) -> Any:
@@ -84,13 +99,14 @@ async def _exchange_code(hass: HomeAssistant, url: str, code: str) -> Any:
                 f"{url}{PAIRING_EXCHANGE_PATH}",
                 json={"code": code},
                 headers={"Accept": "application/json"},
+                allow_redirects=False,
             ) as response,
         ):
             if response.status == 429:
                 raise InvalidSettings("rate_limited")
             if response.status != 200:
                 raise InvalidSettings("pairing_failed")
-            return await response.json(content_type=None)
+            return await _read_json(response)
     except InvalidSettings:
         raise
     except ValueError as err:
@@ -105,11 +121,13 @@ async def _fetch_server_version(hass: HomeAssistant, url: str) -> str | None:
     try:
         async with (
             asyncio.timeout(CAPABILITIES_TIMEOUT_SECONDS),
-            session.get(f"{url}{CAPABILITIES_PATH}", headers={"Accept": "application/json"}) as response,
+            session.get(
+                f"{url}{CAPABILITIES_PATH}", headers={"Accept": "application/json"}, allow_redirects=False
+            ) as response,
         ):
             if response.status != 200:
                 return None
-            data = await response.json(content_type=None)
+            data = await _read_json(response)
     except (ClientError, TimeoutError, OSError, ValueError):
         return None
     return parse_server_version(data)
@@ -156,6 +174,10 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
             except InvalidSettings as err:
                 errors["base"] = err.key
             else:
+                if not settings.broker_tls:
+                    self._pending = settings
+                    self._tls_detail = ""
+                    return await self.async_step_tls_notice()
                 return await self._async_complete(settings)
         return self.async_show_form(step_id="manual", data_schema=MANUAL_SCHEMA, errors=errors)
 
@@ -203,6 +225,9 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_pair(self, user_input: dict[str, Any]) -> tuple[ConnectionSettings, str | None]:
         url = normalize_server_url(user_input[CONF_URL])
+        if is_insecure_remote_url(url):
+            # Die Antwort enthaelt die Zugangsdaten: ohne https nur im lokalen Netz.
+            raise InvalidSettings("insecure_url")
         code = normalize_pairing_code(user_input[CONF_CODE])
         cached = self._exchanged
         if cached is not None and cached[0] == url and cached[1] == code:
