@@ -541,3 +541,67 @@ def test_is_insecure_remote_url(url: str, insecure: bool) -> None:
 def test_vehicle_ident_is_validated() -> None:
     assert p.classify_path(("vehicles", "bad id", "fms")) is None
     assert p.classify_path(("reservations", "vehicle", "x" * 65)) is None
+
+
+# --------------------------------------------------------------------------- Transport, Session, Replay
+
+
+def test_transport_defaults_to_tcp_and_roundtrips() -> None:
+    settings = p.build_settings(valid_raw())
+    assert settings.broker_transport == "tcp" and settings.ws_path == "/mqtt"
+    data = settings.to_entry_data()
+    assert data["broker_transport"] == "tcp" and data["ws_path"] == "/mqtt"
+    assert p.ConnectionSettings.from_entry_data(data).broker_transport == "tcp"
+
+
+def test_websocket_transport_is_accepted_from_pairing_payload() -> None:
+    raw = {**valid_raw(), "broker_transport": "WebSockets", "ws_path": "/mqtt-ws"}
+    settings = p.build_settings(raw)
+    assert settings.broker_transport == "websockets" and settings.ws_path == "/mqtt-ws"
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"broker_transport": "udp"},
+        {"broker_transport": "websockets", "ws_path": "mqtt"},
+        {"broker_transport": "websockets", "ws_path": "/a/../b"},
+        {"broker_transport": "websockets", "ws_path": "/a b"},
+    ],
+)
+def test_invalid_transport_is_rejected(extra: dict[str, str]) -> None:
+    with pytest.raises(p.InvalidSettings) as err:
+        p.build_settings({**valid_raw(), **extra})
+    assert err.value.key == "invalid_transport"
+
+
+def test_session_client_id_is_stable_and_keeps_prefix() -> None:
+    first = p.make_session_client_id("ha_test", "entry-1")
+    assert first == p.make_session_client_id("ha_test", "entry-1")
+    assert first != p.make_session_client_id("ha_test", "entry-2")
+    assert first.startswith(p.CLIENT_ID_PREFIX + "ha_test-")
+    assert len(first) < 65
+
+
+def test_replay_guard_blocks_stale_replay_after_start_but_not_fresh_session() -> None:
+    guard = p.ReplayGuard(max_gap=120, window=10)
+    guard.on_connect(100.0, session_present=True)  # Start mit alter Session: Nachlieferung moeglich
+    assert guard.accepts_live_event(105.0) is False
+    assert guard.accepts_live_event(111.0) is True
+
+    fresh = p.ReplayGuard()
+    fresh.on_connect(100.0, session_present=False)
+    assert fresh.accepts_live_event(100.0) is True
+
+
+def test_replay_guard_allows_replay_after_short_gap_only() -> None:
+    guard = p.ReplayGuard(max_gap=120, window=10)
+    guard.on_connect(0.0, session_present=False)
+    guard.on_disconnect(50.0)
+    guard.on_connect(80.0, session_present=True)  # 30 s Luecke: verpasste Alarme duerfen nachkommen
+    assert guard.accepts_live_event(80.0) is True
+    guard.on_disconnect(200.0)
+    guard.on_disconnect(210.0)  # zaehlt ab der ersten Trennung
+    guard.on_connect(400.0, session_present=True)  # 200 s Luecke: veraltet
+    assert guard.accepts_live_event(401.0) is False
+    assert guard.accepts_live_event(411.0) is True

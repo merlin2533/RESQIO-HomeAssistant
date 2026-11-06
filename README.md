@@ -73,6 +73,13 @@ Haben Sie mehrere Feuerwehren freigegeben, erscheint für jede ein eigenes Gerä
 
 **Neu koppeln:** Hat Ihr Administrator den Zugang gesperrt oder erneuert, meldet Home Assistant das als Reparaturhinweis. Dort geben Sie einen neuen Code ein. Auch nach einer geänderten Freigabe können Sie jederzeit neu koppeln: *Geräte & Dienste → RESQIO → ⋮ → Neu konfigurieren*.
 
+## Verbindung und Zuverlässigkeit
+
+- **Push statt Abfragen:** Die Integration hält eine ausgehende MQTT-Verbindung zum RESQIO-Server. Ein Alarm kommt sofort an. Home Assistant muss dafür nicht von außen erreichbar sein.
+- **Kurze Unterbrechungen gehen nicht verloren:** Die Verbindung nutzt eine persistente Sitzung. Fällt das Netz für bis zu 2 Minuten aus, liefert der Server verpasste Alarmmeldungen nach. Nach einem Neustart von Home Assistant oder längerem Ausfall werden nachgelieferte Alarme bewusst **nicht** mehr als neuer Alarm behandelt. So öffnet sich kein Tor wegen eines Alarms von gestern.
+- **Gesperrte MQTT-Ports:** Blockiert Ihr Netz die Ports 1883 und 8883, kann der RESQIO-Server MQTT über **WebSockets** auf dem normalen HTTPS-Port anbieten (`broker_transport: websockets`, Pfad `ws_path`). Die Integration übernimmt das bei Kopplung und manueller Einrichtung aus der Serverantwort.
+- **Ausfall bemerken:** Ist der Server länger als 10 Minuten nicht erreichbar, zeigt Home Assistant einen Reparaturhinweis an. Der Sensor *Verbindung* zeigt den aktuellen Stand und eignet sich für eine Benachrichtigung.
+
 ## Was Sie sehen
 
 Ihr Administrator wählt in RESQIO, welche Daten gesendet werden. Nicht freigegebene Daten tauchen in Home Assistant gar nicht erst auf.
@@ -86,7 +93,8 @@ Ihr Administrator wählt in RESQIO, welche Daten gesendet werden. Nicht freigege
 | Wartung und Mängel | Anzahl offener Wartungen und Mängel, nach Kategorie |
 | Veranstaltungen | Kalender mit den nächsten Terminen |
 | Reservierungen | Kalender je Fahrzeug und für die ganze Wehr |
-| Weiteres | Pegelstände, Neuigkeiten, Straßensperren |
+| Weiteres | Pegelstände, Neuigkeiten, Straßensperren, kommende Veranstaltungen (diese Sensoren sind zunächst **deaktiviert**; aktivieren Sie sie bei Bedarf unter *Geräte & Dienste → RESQIO → Entitäten*) |
+| Diagnose | *Verbindung* (Home Assistant ↔ RESQIO), *Letzte Nachricht*, *Wiederverbindungen* (deaktiviert) |
 
 ## Blueprints
 
@@ -98,6 +106,7 @@ Blueprints sind fertige Automationen. Sie werden **nicht automatisch** installie
 | Tor öffnen bei Alarm | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/tor_oeffnen_bei_alarm.yaml) |
 | Gerätehaus-Licht bei Alarm | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/geraetehaus_licht_bei_alarm.yaml) |
 | Licht über KNX bei Alarm | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/licht_ueber_knx_bei_alarm.yaml) |
+| Benachrichtigung bei Alarm (Handy, mit Stichwort-Filter) | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/alarm_benachrichtigung.yaml) |
 | Ansage mit Stichwort | [![Importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/merlin2533/RESQIO-HomeAssistant/main/blueprints/automation/resqio/ansage_mit_stichwort.yaml) |
 
 Nach dem Import finden Sie sie unter **Einstellungen → Automatisierungen & Szenen → Blueprints**.

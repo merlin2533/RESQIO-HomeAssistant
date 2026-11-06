@@ -19,19 +19,12 @@
       },
       "manual": {
         "title": "Manual setup",
-        "description": "Enter the access data from RESQIO (Enterprise, Home Assistant, access).",
+        "description": "Server address and access data from RESQIO (Enterprise, Home Assistant). The integration fetches broker, certificate and released fire departments itself.",
         "data": {
-          "broker_host": "Broker host",
-          "broker_port": "Port",
-          "broker_tls": "Use TLS",
+          "url": "RESQIO server address",
           "username": "Username",
           "password": "Password",
-          "topic_root": "Topic root",
-          "departments": "Department slugs (comma-separated)",
-          "ca_pem": "CA certificate (optional, PEM)"
-        },
-        "data_description": {
-          "departments": "The slugs of the released fire departments, e.g. hauptwache, ortsteil-nord."
+          "ca_file": "CA certificate (optional, overrides the server's)"
         }
       },
       "reauth_confirm": {
@@ -69,7 +62,9 @@
       "invalid_username": "The username is invalid.",
       "invalid_topic_root": "The topic root is invalid.",
       "invalid_departments": "The department slugs are invalid or duplicated.",
-      "unknown": "Unknown error."
+      "unknown": "Unknown error.",
+      "invalid_certificate": "The file is not a valid PEM certificate.",
+      "invalid_transport": "The transport or WebSocket path is invalid."
     },
     "abort": {
       "already_configured": "This access is already set up. Its access data were updated.",
@@ -86,6 +81,9 @@
       },
       "bridge_online": {
         "name": "Bridge online"
+      },
+      "connection": {
+        "name": "Connection"
       }
     },
     "sensor": {
@@ -142,6 +140,12 @@
       },
       "road_closures": {
         "name": "Road closures"
+      },
+      "last_message": {
+        "name": "Last message"
+      },
+      "reconnects": {
+        "name": "Reconnects"
       }
     },
     "device_tracker": {
@@ -170,6 +174,12 @@
       "reservations_all": {
         "name": "Reservations total"
       }
+    }
+  },
+  "issues": {
+    "long_outage": {
+      "title": "RESQIO broker unreachable",
+      "description": "Home Assistant has had no connection to the RESQIO broker ({host}) for more than 10 minutes. Alarms are not received in the meantime. Check the network, firewall and the server address. If the MQTT ports are blocked, ask your administrator to offer the broker over WebSockets."
     }
   }
 }
