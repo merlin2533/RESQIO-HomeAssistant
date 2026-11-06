@@ -40,6 +40,8 @@ _LOGGER = logging.getLogger(__name__)
 
 CONNECT_TIMEOUT_SECONDS = 10
 KEEPALIVE_SECONDS = 30
+# Obergrenze fuer unterschiedliche Topics je Zugang (Schutz vor unbegrenztem Wachstum).
+MAX_READINGS = 1000
 # MQTT-Reasoncodes fuer ungueltige Zugangsdaten bzw. nicht autorisiert (MQTT 3.1.1 / 5).
 _AUTH_FAILURE_CODES = {4, 5, 134, 135}
 
@@ -318,6 +320,8 @@ class ResqioHub:
             async_dispatcher_send(self.hass, signal_alarm_event(self.entry_id), reading.slug, reading.value)
 
         previous = self.readings.get(key)
+        if previous is None and len(self.readings) >= MAX_READINGS:
+            return
         self.readings[key] = reading
         if previous is None and reading.value is not None:
             async_dispatcher_send(self.hass, signal_new_topic(self.entry_id), key)

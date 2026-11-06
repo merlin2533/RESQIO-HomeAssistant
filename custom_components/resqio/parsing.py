@@ -9,6 +9,7 @@ Eingaben keine Ausnahmen, sondern liefern `None`.
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import re
 import secrets
@@ -71,6 +72,7 @@ _WS_PATH_RE = re.compile(r"^/[A-Za-z0-9_./-]{0,63}$")
 _SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$")
 _ROOT_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 _CODE_RE = re.compile(r"^[A-Z0-9]{6,32}$")
+_IDENT_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 _USERNAME_RE = re.compile(r"^[^|\s/+#]{1,128}$")
 
 
@@ -164,7 +166,7 @@ def classify_path(parts: tuple[str, ...]) -> tuple[Kind, str] | None:
             return Kind.ALARM_COORDINATES, ""
         case ("alarm", "vehicles", "count"):
             return Kind.ALARM_VEHICLE_COUNT, ""
-        case ("vehicles", vehicle_id, "fms") if vehicle_id:
+        case ("vehicles", vehicle_id, "fms") if _IDENT_RE.match(vehicle_id):
             return Kind.VEHICLE_FMS, vehicle_id
         case ("personnel", metric) if metric in PERSONNEL_METRICS:
             return Kind.PERSONNEL, metric
@@ -186,7 +188,7 @@ def classify_path(parts: tuple[str, ...]) -> tuple[Kind, str] | None:
             return Kind.EVENT_UPCOMING, ""
         case ("reservations", "all"):
             return Kind.RESERVATIONS_ALL, ""
-        case ("reservations", "vehicle", vehicle_id) if vehicle_id:
+        case ("reservations", "vehicle", vehicle_id) if _IDENT_RE.match(vehicle_id):
             return Kind.RESERVATIONS_VEHICLE, vehicle_id
         case ("news", "latest"):
             return Kind.NEWS_LATEST, ""
@@ -649,6 +651,21 @@ def normalize_server_url(url: str) -> str:
     if parts.scheme not in ("http", "https") or not parts.netloc:
         raise InvalidSettings("invalid_url")
     return cleaned
+
+
+def is_insecure_remote_url(url: str) -> bool:
+    """True bei `http://` an einen Host ausserhalb von Loopback und privaten Netzen."""
+    parts = urlsplit(url)
+    if parts.scheme != "http":
+        return False
+    host = parts.hostname or ""
+    if host == "localhost" or host.endswith((".local", ".lan", ".home.arpa")) or ("." not in host and ":" not in host):
+        return False
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return True
+    return not (address.is_private or address.is_loopback or address.is_link_local)
 
 
 CLIENT_ID_PREFIX = "resqio-ha-"

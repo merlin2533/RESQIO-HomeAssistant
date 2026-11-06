@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Mapping
 from dataclasses import replace
 from typing import Any
@@ -34,6 +35,7 @@ from .hub import probe_connection
 from .parsing import (
     ConnectionSettings,
     InvalidSettings,
+    is_insecure_remote_url,
     normalize_pairing_code,
     normalize_server_url,
     parse_pairing_response,
@@ -42,7 +44,16 @@ from .parsing import (
 )
 
 HTTP_TIMEOUT_SECONDS = 15
+MAX_RESPONSE_BYTES = 65536
 CAPABILITIES_TIMEOUT_SECONDS = 5
+
+
+def _checked_server_url(raw: str) -> str:
+    """Normalisiert die Adresse; http ausserhalb des lokalen Netzes wird abgelehnt (Zugangsdaten)."""
+    url = normalize_server_url(raw)
+    if is_insecure_remote_url(url):
+        raise InvalidSettings("insecure_url")
+    return url
 
 
 def _pairing_schema(default_url: str | None = None) -> vol.Schema:
@@ -67,6 +78,18 @@ def _manual_schema(default_url: str | None = None) -> vol.Schema:
     )
 
 
+async def _read_json(response: Any) -> Any:
+    """Liest eine JSON-Antwort mit Groessenlimit."""
+    if response.content_length is not None and response.content_length > MAX_RESPONSE_BYTES:
+        raise ValueError("response too large")
+    raw = bytearray()
+    async for chunk in response.content.iter_chunked(8192):
+        raw.extend(chunk)
+        if len(raw) > MAX_RESPONSE_BYTES:
+            raise ValueError("response too large")
+    return json.loads(raw)
+
+
 async def _post_json(hass: HomeAssistant, url: str, path: str, body: dict[str, Any]) -> Any:
     """POST {url}{path} mit JSON-Body. Fehler bleiben neutral."""
     session = async_get_clientsession(hass)
@@ -77,13 +100,14 @@ async def _post_json(hass: HomeAssistant, url: str, path: str, body: dict[str, A
                 f"{url}{path}",
                 json=body,
                 headers={"Accept": "application/json"},
+                allow_redirects=False,
             ) as response,
         ):
             if response.status == 429:
                 raise InvalidSettings("rate_limited")
             if response.status != 200:
                 raise InvalidSettings("pairing_failed")
-            return await response.json(content_type=None)
+            return await _read_json(response)
     except InvalidSettings:
         raise
     except ValueError as err:
@@ -108,11 +132,13 @@ async def _fetch_server_version(hass: HomeAssistant, url: str) -> str | None:
     try:
         async with (
             asyncio.timeout(CAPABILITIES_TIMEOUT_SECONDS),
-            session.get(f"{url}{CAPABILITIES_PATH}", headers={"Accept": "application/json"}) as response,
+            session.get(
+                f"{url}{CAPABILITIES_PATH}", headers={"Accept": "application/json"}, allow_redirects=False
+            ) as response,
         ):
             if response.status != 200:
                 return None
-            data = await response.json(content_type=None)
+            data = await _read_json(response)
     except (ClientError, TimeoutError, OSError, ValueError):
         return None
     return parse_server_version(data)
@@ -148,7 +174,7 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                url = normalize_server_url(user_input[CONF_URL])
+                url = _checked_server_url(user_input[CONF_URL])
                 username = str(user_input["username"]).strip()
                 password = str(user_input["password"])
                 payload = await _discover(self.hass, url, username, password)
@@ -232,7 +258,7 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
         return url if isinstance(url, str) and url else None
 
     async def _async_pair(self, user_input: dict[str, Any]) -> tuple[ConnectionSettings, str | None]:
-        url = normalize_server_url(user_input[CONF_URL])
+        url = _checked_server_url(user_input[CONF_URL])
         code = normalize_pairing_code(user_input[CONF_CODE])
         cached = self._exchanged
         if cached is not None and cached[0] == url and cached[1] == code:

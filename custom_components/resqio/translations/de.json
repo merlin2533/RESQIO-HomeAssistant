@@ -49,6 +49,7 @@
       }
     },
     "error": {
+      "insecure_url": "Unverschlüsseltes http ist nur für Server im lokalen Netz erlaubt. Bitte https verwenden.",
       "pairing_failed": "Kopplung fehlgeschlagen. Bitte Server-Adresse und Code prüfen.",
       "rate_limited": "Zu viele Versuche. Bitte später erneut versuchen.",
       "cannot_connect": "Der Server oder Broker ist nicht erreichbar.",
