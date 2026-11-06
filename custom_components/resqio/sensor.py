@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
@@ -11,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import ResqioEntity, ResqioStateMixin, async_setup_dynamic, jsonable
+from .entity import ResqioDiagnosticEntity, ResqioEntity, ResqioStateMixin, async_setup_dynamic, jsonable
 from .hub import ResqioHub
 from .parsing import MAX_STATE_LENGTH, PERSONNEL_METRICS, FmsValue, Kind, humanize_slug
 
@@ -75,8 +76,10 @@ class ResqioSensor(ResqioStateMixin, ResqioEntity, SensorEntity):
         state_class: SensorStateClass | None = None,
         attributes: Callable[[Any], dict[str, Any]] | None = None,
         icon: str | None = None,
+        enabled_default: bool = True,
     ) -> None:
         super().__init__(hub, slug, key, field=field, translation_key=translation_key, name=name)
+        self._attr_entity_registry_enabled_default = enabled_default
         self._extract = extract
         self._attributes_fn = attributes
         self._attr_device_class = device_class
@@ -95,6 +98,33 @@ class ResqioSensor(ResqioStateMixin, ResqioEntity, SensorEntity):
         if isinstance(self._raw, str) and len(self._raw) > MAX_STATE_LENGTH:
             attrs["volltext"] = self._raw
         return attrs or None
+
+
+class ResqioLastMessageSensor(ResqioDiagnosticEntity, SensorEntity):
+    """Zeitpunkt der letzten Nachricht dieser Wehr. Zeigt, ob wirklich Daten ankommen."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, hub: ResqioHub, slug: str) -> None:
+        super().__init__(hub, slug, "last_message", "last_message")
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self._hub.last_message_at.get(self._slug)
+
+
+class ResqioReconnectSensor(ResqioDiagnosticEntity, SensorEntity):
+    """Wie oft die Verbindung seit dem Start neu aufgebaut wurde. Viele Werte deuten auf ein instabiles Netz."""
+
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, hub: ResqioHub, slug: str) -> None:
+        super().__init__(hub, slug, "reconnects", "reconnects")
+
+    @property
+    def native_value(self) -> int:
+        return self._hub.reconnect_count
 
 
 def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[Entity]:
@@ -274,6 +304,7 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
                     key,
                     _gauge_value,
                     name=f"Pegel {name}",
+                    enabled_default=False,
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda v: {
                         "einheit": v.get("unit") if isinstance(v, dict) else None,
@@ -291,6 +322,7 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
                     key,
                     _news_title,
                     translation_key="news_latest",
+                    enabled_default=False,
                     attributes=lambda v: {"meldungen": jsonable(v)} if isinstance(v, list) else {},
                     icon="mdi:newspaper-variant-outline",
                 )
@@ -304,6 +336,7 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
                     key,
                     _as_count,
                     translation_key="events_upcoming",
+                    enabled_default=False,
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda v: {"veranstaltungen": jsonable(v)} if isinstance(v, list) else {},
                     icon="mdi:calendar-multiple",
@@ -318,6 +351,7 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
                     key,
                     _as_count,
                     translation_key="road_closures",
+                    enabled_default=False,
                     state_class=SensorStateClass.MEASUREMENT,
                     attributes=lambda v: {"sperrungen": jsonable(v)} if isinstance(v, list) else {},
                     icon="mdi:road-variant",
@@ -327,4 +361,8 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    hub: ResqioHub = entry.runtime_data
+    diagnostics: list[Entity] = [ResqioLastMessageSensor(hub, dept.slug) for dept in hub.settings.departments]
+    diagnostics.append(ResqioReconnectSensor(hub, hub.settings.departments[0].slug))
+    async_add_entities(diagnostics)
     await async_setup_dynamic(hass, entry, "sensor", async_add_entities, _build)

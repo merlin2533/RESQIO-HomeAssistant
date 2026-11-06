@@ -180,3 +180,50 @@ def test_calendar_reads_items_from_object_payload() -> None:
     value = {"name": None, "items": [{"id": "r1", "start": start, "end": end}]}
     calendar = _calendar(_hub_with(_reservation("lf-10", value)))
     assert [(e.start, e.end) for e in calendar._events()] == [(start, end)]
+
+
+def _flags(session_present: bool) -> Any:
+    return SimpleNamespace(session_present=session_present)
+
+
+def test_stale_session_replay_does_not_trigger_alarm_event(sent: list[tuple[Any, ...]]) -> None:
+    hub = hub_module.ResqioHub(_hass(), "entry", _settings())
+    client = MagicMock()
+    hub._on_connect(client, None, _flags(True), _reason(0, failure=False), None)
+    sent.clear()
+    hub._handle_message("HomeAssistant/hauptwache/alarm/event", b"neu", False)
+    assert not any(args and args[0] == hub_module.signal_alarm_event("entry") for args in sent)
+
+
+def test_live_alarm_event_on_fresh_session_triggers(sent: list[tuple[Any, ...]]) -> None:
+    hub = hub_module.ResqioHub(_hass(), "entry", _settings())
+    hub._on_connect(MagicMock(), None, _flags(False), _reason(0, failure=False), None)
+    sent.clear()
+    hub._handle_message("HomeAssistant/hauptwache/alarm/event", b"neu", False)
+    assert any(args and args[0] == hub_module.signal_alarm_event("entry") for args in sent)
+
+
+def test_operation_client_is_persistent_and_probe_is_not() -> None:
+    settings = _settings()
+    persistent = hub_module._new_client(settings, "resqio-ha-x", persistent=True)
+    probe = hub_module._new_client(settings, "resqio-ha-x-probe")
+    assert persistent._clean_session is False
+    assert probe._clean_session is True
+
+
+def test_websocket_transport_sets_path() -> None:
+    settings = build_settings(
+        {
+            "broker_host": "resqio.example.de",
+            "broker_port": 443,
+            "broker_tls": True,
+            "broker_transport": "websockets",
+            "ws_path": "/mqtt-ws",
+            "username": "ha_test",
+            "password": "geheim",
+            "departments": [{"slug": "hauptwache", "name": "Hauptwache"}],
+        }
+    )
+    client = hub_module._new_client(settings, "resqio-ha-x")
+    assert client._transport == "websockets"
+    assert client._websocket_path == "/mqtt-ws"

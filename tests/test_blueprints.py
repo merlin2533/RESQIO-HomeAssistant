@@ -88,3 +88,36 @@ def test_knx_address_template_splits_and_trims() -> None:
     template = jinja2.Environment().from_string(data["variables"]["adressen"])
     assert template.render(adressen_text=" 1/0/1, 1/0/2 ,,") == "['1/0/1', '1/0/2']"
     assert template.render(adressen_text="") == "[]"
+
+
+def _alarm_notification_filter() -> Any:
+    data = _load(BLUEPRINT_DIR / "alarm_benachrichtigung.yaml")
+    condition = data["condition"][1]["value_template"]
+    return jinja2.Environment().from_string(condition)
+
+
+@pytest.mark.parametrize(
+    ("filter_text", "keyword", "expected"),
+    [
+        ("", "B3 Wohnungsbrand", "True"),
+        ("b3, thl", "B3 Wohnungsbrand", "True"),
+        ("B3, THL", "thl klein", "True"),
+        ("b3", "THL klein", "False"),
+        (" , ", "irgendwas", "True"),
+    ],
+)
+def test_alarm_notification_keyword_filter(filter_text: str, keyword: str, expected: str) -> None:
+    template = _alarm_notification_filter()
+    rendered = template.render(
+        stichwort_filter=filter_text,
+        stichwort_sensor="sensor.x",
+        states=lambda _entity: keyword,
+    )
+    assert rendered.strip() == expected
+
+
+def test_alarm_notification_blueprint_triggers_on_event_entity() -> None:
+    data = _load(BLUEPRINT_DIR / "alarm_benachrichtigung.yaml")
+    assert data["trigger"][0]["trigger"] == "state"
+    defaults = data["blueprint"]["input"]["ereignisarten"]["default"]
+    assert defaults == ["neu"]

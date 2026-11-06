@@ -62,7 +62,8 @@
       "invalid_topic_root": "Die Topic-Wurzel ist ungültig.",
       "invalid_departments": "Die Wehr-Kürzel sind ungültig oder doppelt.",
       "unknown": "Unbekannter Fehler.",
-      "invalid_certificate": "Die Datei ist kein gültiges PEM-Zertifikat."
+      "invalid_certificate": "Die Datei ist kein gültiges PEM-Zertifikat.",
+      "invalid_transport": "Transport oder WebSocket-Pfad ist ungültig."
     },
     "abort": {
       "already_configured": "Dieser Zugang ist bereits eingerichtet. Seine Zugangsdaten wurden aktualisiert.",
@@ -79,6 +80,9 @@
       },
       "bridge_online": {
         "name": "Bridge online"
+      },
+      "connection": {
+        "name": "Verbindung"
       }
     },
     "sensor": {
@@ -135,6 +139,12 @@
       },
       "road_closures": {
         "name": "Straßensperrungen"
+      },
+      "last_message": {
+        "name": "Letzte Nachricht"
+      },
+      "reconnects": {
+        "name": "Wiederverbindungen"
       }
     },
     "device_tracker": {
@@ -163,6 +173,12 @@
       "reservations_all": {
         "name": "Reservierungen gesamt"
       }
+    }
+  },
+  "issues": {
+    "long_outage": {
+      "title": "RESQIO-Broker nicht erreichbar",
+      "description": "Home Assistant hat seit mehr als 10 Minuten keine Verbindung zum RESQIO-Broker ({host}). Solange kommen keine Alarme an. Prüfen Sie Netzwerk, Firewall und die Serveradresse. Sind die MQTT-Ports gesperrt, bitten Sie Ihren Administrator, den Broker über WebSockets anzubieten."
     }
   }
 }

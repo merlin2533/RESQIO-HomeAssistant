@@ -8,6 +8,7 @@ Eingaben keine Ausnahmen, sondern liefern `None`.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import secrets
@@ -50,6 +51,23 @@ MAX_PAYLOAD_BYTES = 8192
 # Heartbeat gilt die Bridge als nicht verfuegbar (kein LWT, siehe README).
 HEARTBEAT_MAX_AGE_SECONDS = 120
 
+# Transport zum Broker: klassisch TCP oder MQTT ueber WebSockets (Port 443 hinter einem Reverse-Proxy,
+# fuer Netze, in denen 1883/8883 gesperrt sind).
+TRANSPORT_TCP = "tcp"
+TRANSPORT_WEBSOCKETS = "websockets"
+TRANSPORTS: tuple[str, ...] = (TRANSPORT_TCP, TRANSPORT_WEBSOCKETS)
+DEFAULT_WS_PATH = "/mqtt"
+
+# Persistente MQTT-Session: nach einer Unterbrechung liefert der Broker verpasste QoS-1-Nachrichten nach.
+# Laenger als diese Luecke (oder nach einem Neustart von Home Assistant) gelten nachgelieferte
+# Alarm-Ereignisse als veraltet und loesen keine Automation mehr aus (Tor-Oeffnung Stunden spaeter).
+REPLAY_MAX_GAP_SECONDS = 120.0
+REPLAY_GUARD_WINDOW_SECONDS = 10.0
+
+# Ab dieser Dauer ohne Verbindung erscheint ein Reparaturhinweis.
+LONG_OUTAGE_SECONDS = 600
+
+_WS_PATH_RE = re.compile(r"^/[A-Za-z0-9_./-]{0,63}$")
 _SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$")
 _ROOT_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 _CODE_RE = re.compile(r"^[A-Z0-9]{6,32}$")
@@ -485,6 +503,8 @@ class ConnectionSettings:
     ca_pem: str | None = field(default=None, repr=False)
     server_url: str | None = None
     server_version: str | None = None
+    broker_transport: str = TRANSPORT_TCP
+    ws_path: str = DEFAULT_WS_PATH
 
     def topic_filters(self) -> list[str]:
         """Eine Subscription je Wehr. Nie `<root>/#` oder Wildcards ueber Wehrgrenzen."""
@@ -508,6 +528,8 @@ class ConnectionSettings:
             "departments": [{"slug": d.slug, "name": d.name} for d in self.departments],
             "server_url": self.server_url,
             "server_version": self.server_version,
+            "broker_transport": self.broker_transport,
+            "ws_path": self.ws_path,
         }
 
     @classmethod
@@ -556,6 +578,13 @@ def build_settings(
     if ca_pem is not None and "BEGIN CERTIFICATE" not in ca_pem:
         raise InvalidSettings("invalid_response")
 
+    transport = str(raw.get("broker_transport") or TRANSPORT_TCP).strip().lower()
+    if transport not in TRANSPORTS:
+        raise InvalidSettings("invalid_transport")
+    ws_path = str(raw.get("ws_path") or DEFAULT_WS_PATH).strip()
+    if not _WS_PATH_RE.match(ws_path) or ".." in ws_path:
+        raise InvalidSettings("invalid_transport")
+
     return ConnectionSettings(
         broker_host=host,
         broker_port=port,
@@ -567,6 +596,8 @@ def build_settings(
         ca_pem=ca_pem,
         server_url=server_url,
         server_version=server_version,
+        broker_transport=transport,
+        ws_path=ws_path,
     )
 
 
@@ -633,6 +664,55 @@ def make_client_id(username: str, purpose: str = "") -> str:
     """
     middle = f"{purpose}-" if purpose else ""
     return f"{CLIENT_ID_PREFIX}{username}-{middle}{secrets.token_hex(4)}"
+
+
+def make_session_client_id(username: str, entry_id: str) -> str:
+    """Stabile Client-ID fuer die persistente Session des Betriebs.
+
+    Gleiche Eintrags-ID ergibt dieselbe Client-ID, damit der Broker die Session (Abonnements und
+    verpasste QoS-1-Nachrichten) wiederfindet. Prefix und Benutzername wie bei `make_client_id`.
+    """
+    digest = hashlib.sha256(entry_id.encode("utf-8")).hexdigest()[:8]
+    return f"{CLIENT_ID_PREFIX}{username}-s{digest}"
+
+
+class ReplayGuard:
+    """Entscheidet, ob eine nicht retained Alarmmeldung als live gelten darf.
+
+    Mit persistenter Session stellt der Broker Nachrichten nach, die waehrend einer Unterbrechung
+    ankamen. Kurze Luecken sind erwuenscht (der Alarm wurde sonst verpasst). Nach einem Neustart
+    oder einer langen Unterbrechung wuerde dieselbe Nachlieferung einen Alarm von gestern als
+    neuen Alarm ausloesen. Dann werden Alarm-Ereignisse im Zeitfenster nach dem Verbinden verworfen.
+    Zeiten sind monotone Sekunden.
+    """
+
+    def __init__(
+        self,
+        max_gap: float = REPLAY_MAX_GAP_SECONDS,
+        window: float = REPLAY_GUARD_WINDOW_SECONDS,
+    ) -> None:
+        self._max_gap = max_gap
+        self._window = window
+        self._last_disconnect: float | None = None
+        self._ever_connected = False
+        self._blocked_until = 0.0
+
+    def on_connect(self, now: float, *, session_present: bool) -> None:
+        if not session_present:
+            # Frische Session: es gibt nichts nachzuliefern.
+            self._blocked_until = 0.0
+        else:
+            gap = None if not self._ever_connected or self._last_disconnect is None else now - self._last_disconnect
+            self._blocked_until = now + self._window if gap is None or gap > self._max_gap else 0.0
+        self._ever_connected = True
+        self._last_disconnect = None
+
+    def on_disconnect(self, now: float) -> None:
+        if self._last_disconnect is None:
+            self._last_disconnect = now
+
+    def accepts_live_event(self, now: float) -> bool:
+        return now >= self._blocked_until
 
 
 def normalize_pairing_code(code: str) -> str:

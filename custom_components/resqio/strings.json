@@ -62,7 +62,8 @@
       "invalid_topic_root": "The topic root is invalid.",
       "invalid_departments": "The department slugs are invalid or duplicated.",
       "unknown": "Unknown error.",
-      "invalid_certificate": "The file is not a valid PEM certificate."
+      "invalid_certificate": "The file is not a valid PEM certificate.",
+      "invalid_transport": "The transport or WebSocket path is invalid."
     },
     "abort": {
       "already_configured": "This access is already set up. Its access data were updated.",
@@ -79,6 +80,9 @@
       },
       "bridge_online": {
         "name": "Bridge online"
+      },
+      "connection": {
+        "name": "Connection"
       }
     },
     "sensor": {
@@ -135,6 +139,12 @@
       },
       "road_closures": {
         "name": "Road closures"
+      },
+      "last_message": {
+        "name": "Last message"
+      },
+      "reconnects": {
+        "name": "Reconnects"
       }
     },
     "device_tracker": {
@@ -163,6 +173,12 @@
       "reservations_all": {
         "name": "Reservations total"
       }
+    }
+  },
+  "issues": {
+    "long_outage": {
+      "title": "RESQIO broker unreachable",
+      "description": "Home Assistant has had no connection to the RESQIO broker ({host}) for more than 10 minutes. Alarms are not received in the meantime. Check the network, firewall and the server address. If the MQTT ports are blocked, ask your administrator to offer the broker over WebSockets."
     }
   }
 }
