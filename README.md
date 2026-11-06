@@ -77,7 +77,7 @@ Haben Sie mehrere Feuerwehren freigegeben, erscheint für jede ein eigenes Gerä
 
 - **Push statt Abfragen:** Die Integration hält eine ausgehende MQTT-Verbindung zum RESQIO-Server. Ein Alarm kommt sofort an. Home Assistant muss dafür nicht von außen erreichbar sein.
 - **Kurze Unterbrechungen gehen nicht verloren:** Die Verbindung nutzt eine persistente Sitzung. Fällt das Netz für bis zu 2 Minuten aus, liefert der Server verpasste Alarmmeldungen nach. Nach einem Neustart von Home Assistant oder längerem Ausfall werden nachgelieferte Alarme bewusst **nicht** mehr als neuer Alarm behandelt. So öffnet sich kein Tor wegen eines Alarms von gestern.
-- **Gesperrte MQTT-Ports:** Blockiert Ihr Netz die Ports 1883 und 8883, kann der RESQIO-Server MQTT über **WebSockets** auf dem normalen HTTPS-Port anbieten (`broker_transport: websockets`, Pfad `ws_path`). Bei der Kopplung übernimmt die Integration das aus der Serverantwort. Bei manueller Einrichtung wählen Sie *Transport* aus.
+- **Gesperrte MQTT-Ports:** Blockiert Ihr Netz die Ports 1883 und 8883, kann der RESQIO-Server MQTT über **WebSockets** auf dem normalen HTTPS-Port anbieten (`broker_transport: websockets`, Pfad `ws_path`). Die Integration übernimmt das bei Kopplung und manueller Einrichtung aus der Serverantwort.
 - **Ausfall bemerken:** Ist der Server länger als 10 Minuten nicht erreichbar, zeigt Home Assistant einen Reparaturhinweis an. Der Sensor *Verbindung* zeigt den aktuellen Stand und eignet sich für eine Benachrichtigung.
 
 ## Was Sie sehen

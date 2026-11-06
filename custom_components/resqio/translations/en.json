@@ -19,22 +19,12 @@
       },
       "manual": {
         "title": "Manual setup",
-        "description": "Enter the access data from RESQIO (Enterprise, Home Assistant, access).",
+        "description": "Server address and access data from RESQIO (Enterprise, Home Assistant). The integration fetches broker, certificate and released fire departments itself.",
         "data": {
-          "broker_host": "Broker host",
-          "broker_port": "Port",
-          "broker_tls": "Use TLS",
-          "broker_transport": "Transport",
-          "ws_path": "WebSocket path (only for WebSockets)",
+          "url": "RESQIO server address",
           "username": "Username",
           "password": "Password",
-          "topic_root": "Topic root",
-          "departments": "Department slugs (comma-separated)",
-          "ca_pem": "CA certificate (optional, PEM)"
-        },
-        "data_description": {
-          "departments": "The slugs of the released fire departments, e.g. hauptwache, ortsteil-nord.",
-          "broker_transport": "WebSockets runs MQTT over the normal HTTPS port, for networks that block the MQTT ports. The broker must offer a WebSocket path."
+          "ca_file": "CA certificate (optional, overrides the server's)"
         }
       },
       "reauth_confirm": {
@@ -72,6 +62,7 @@
       "invalid_topic_root": "The topic root is invalid.",
       "invalid_departments": "The department slugs are invalid or duplicated.",
       "unknown": "Unknown error.",
+      "invalid_certificate": "The file is not a valid PEM certificate.",
       "invalid_transport": "The transport or WebSocket path is invalid."
     },
     "abort": {
@@ -184,18 +175,10 @@
       }
     }
   },
-  "selector": {
-    "broker_transport": {
-      "options": {
-        "tcp": "TCP (standard)",
-        "websockets": "WebSockets (port 443 behind a proxy)"
-      }
-    }
-  },
   "issues": {
     "long_outage": {
       "title": "RESQIO broker unreachable",
-      "description": "Home Assistant has had no connection to the RESQIO broker ({host}) for more than 10 minutes. Alarms are not received in the meantime. Check the network, firewall and the server address. If the MQTT ports are blocked, set the transport to WebSockets via Reconfigure."
+      "description": "Home Assistant has had no connection to the RESQIO broker ({host}) for more than 10 minutes. Alarms are not received in the meantime. Check the network, firewall and the server address. If the MQTT ports are blocked, ask your administrator to offer the broker over WebSockets."
     }
   }
 }

@@ -1,6 +1,6 @@
 [project]
 name = "resqio-homeassistant"
-version = "0.8.0"
+version = "0.9.1"
 description = "RESQIO-Integration für Home Assistant (reiner MQTT-Empfänger)"
 requires-python = ">=3.13"
 

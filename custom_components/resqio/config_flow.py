@@ -9,18 +9,14 @@ from typing import Any
 
 import voluptuous as vol
 from aiohttp import ClientError
+from homeassistant.components.file_upload import process_uploaded_file
 from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_RECONFIGURE, ConfigFlow, ConfigFlowResult
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv  # noqa: F401 - Selektoren laden
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
-    BooleanSelector,
-    NumberSelector,
-    NumberSelectorConfig,
-    NumberSelectorMode,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
+    FileSelector,
+    FileSelectorConfig,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -30,21 +26,16 @@ from .const import (
     CAPABILITIES_PATH,
     CONF_CODE,
     CONF_URL,
-    DEFAULT_BROKER_PORT,
+    DISCOVER_PATH,
     DOMAIN,
     PAIRING_EXCHANGE_PATH,
 )
 from .hub import probe_connection
 from .parsing import (
-    DEFAULT_WS_PATH,
-    TRANSPORT_TCP,
-    TRANSPORTS,
     ConnectionSettings,
     InvalidSettings,
-    build_settings,
     normalize_pairing_code,
     normalize_server_url,
-    parse_departments_text,
     parse_pairing_response,
     parse_server_version,
     parse_tls_warning,
@@ -64,39 +55,27 @@ def _pairing_schema(default_url: str | None = None) -> vol.Schema:
     )
 
 
-MANUAL_SCHEMA = vol.Schema(
-    {
-        vol.Required("broker_host"): TextSelector(),
-        vol.Required("broker_port", default=DEFAULT_BROKER_PORT): NumberSelector(
-            NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
-        ),
-        vol.Required("broker_tls", default=False): BooleanSelector(),
-        vol.Required("broker_transport", default=TRANSPORT_TCP): SelectSelector(
-            SelectSelectorConfig(
-                options=list(TRANSPORTS),
-                mode=SelectSelectorMode.DROPDOWN,
-                translation_key="broker_transport",
-            )
-        ),
-        vol.Optional("ws_path", default=DEFAULT_WS_PATH): TextSelector(),
-        vol.Required("username"): TextSelector(),
-        vol.Required("password"): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
-        vol.Required("topic_root", default="HomeAssistant"): TextSelector(),
-        vol.Required("departments"): TextSelector(),
-        vol.Optional("ca_pem"): TextSelector(TextSelectorConfig(multiline=True)),
-    }
-)
+def _manual_schema(default_url: str | None = None) -> vol.Schema:
+    url_key = vol.Required(CONF_URL, default=default_url) if default_url else vol.Required(CONF_URL)
+    return vol.Schema(
+        {
+            url_key: TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
+            vol.Required("username"): TextSelector(),
+            vol.Required("password"): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+            vol.Optional("ca_file"): FileSelector(FileSelectorConfig(accept=".pem,.crt,.cer,.ca-bundle")),
+        }
+    )
 
 
-async def _exchange_code(hass: HomeAssistant, url: str, code: str) -> Any:
-    """POST {url}/api/ha-bridge/pairing/exchange. Fehler bleiben neutral."""
+async def _post_json(hass: HomeAssistant, url: str, path: str, body: dict[str, Any]) -> Any:
+    """POST {url}{path} mit JSON-Body. Fehler bleiben neutral."""
     session = async_get_clientsession(hass)
     try:
         async with (
             asyncio.timeout(HTTP_TIMEOUT_SECONDS),
             session.post(
-                f"{url}{PAIRING_EXCHANGE_PATH}",
-                json={"code": code},
+                f"{url}{path}",
+                json=body,
                 headers={"Accept": "application/json"},
             ) as response,
         ):
@@ -111,6 +90,16 @@ async def _exchange_code(hass: HomeAssistant, url: str, code: str) -> Any:
         raise InvalidSettings("invalid_response") from err
     except (ClientError, TimeoutError, OSError) as err:
         raise InvalidSettings("cannot_connect") from err
+
+
+async def _exchange_code(hass: HomeAssistant, url: str, code: str) -> Any:
+    """POST {url}/api/ha-bridge/pairing/exchange."""
+    return await _post_json(hass, url, PAIRING_EXCHANGE_PATH, {"code": code})
+
+
+async def _discover(hass: HomeAssistant, url: str, username: str, password: str) -> Any:
+    """POST {url}/api/ha-bridge/discover: Broker, CA und freigegebene Wehren zu den Zugangsdaten."""
+    return await _post_json(hass, url, DISCOVER_PATH, {"username": username, "password": password})
 
 
 async def _fetch_server_version(hass: HomeAssistant, url: str) -> str | None:
@@ -155,23 +144,50 @@ class ResqioConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self._async_pairing_step("reconfigure", user_input)
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Zugangsdaten + Server-Adresse: Broker, CA und die freigegebenen Wehren holt die Integration selbst."""
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                departments = parse_departments_text(str(user_input["departments"]))
-                settings = build_settings(
-                    {
-                        **user_input,
-                        "broker_port": int(user_input["broker_port"]),
-                        "departments": [{"slug": d.slug, "name": d.name} for d in departments],
-                    }
-                )
+                url = normalize_server_url(user_input[CONF_URL])
+                username = str(user_input["username"]).strip()
+                password = str(user_input["password"])
+                payload = await _discover(self.hass, url, username, password)
+                if not isinstance(payload, dict):
+                    raise InvalidSettings("invalid_response")
+                ca_pem = await self._async_read_ca_file(user_input.get("ca_file"))
+                payload = {**payload, "password": password}
+                if ca_pem:
+                    payload["ca_pem"] = ca_pem
+                settings = parse_pairing_response(payload, url)
+                settings = replace(settings, server_version=await _fetch_server_version(self.hass, url))
                 await self._async_check_connection(settings)
+                warning = parse_tls_warning(payload)
             except InvalidSettings as err:
                 errors["base"] = err.key
             else:
+                if warning is not None:
+                    self._pending = settings
+                    self._tls_detail = warning
+                    return await self.async_step_tls_notice()
                 return await self._async_complete(settings)
-        return self.async_show_form(step_id="manual", data_schema=MANUAL_SCHEMA, errors=errors)
+        return self.async_show_form(step_id="manual", data_schema=_manual_schema(), errors=errors)
+
+    async def _async_read_ca_file(self, file_id: str | None) -> str | None:
+        """Liest ein hochgeladenes CA-Zertifikat (PEM). Ohne Datei: None (System-Zertifikate)."""
+        if not file_id:
+            return None
+
+        def _read() -> str:
+            with process_uploaded_file(self.hass, file_id) as path:
+                return path.read_text(encoding="utf-8", errors="strict")
+
+        try:
+            text = await self.hass.async_add_executor_job(_read)
+        except (OSError, ValueError) as err:
+            raise InvalidSettings("invalid_certificate") from err
+        if "BEGIN CERTIFICATE" not in text:
+            raise InvalidSettings("invalid_certificate")
+        return text
 
     async def async_step_tls_notice(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Hinweis auf eine unverschluesselte Verbindung; erst nach Bestaetigung wird gespeichert."""

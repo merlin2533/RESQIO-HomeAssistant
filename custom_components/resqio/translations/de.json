@@ -19,22 +19,12 @@
       },
       "manual": {
         "title": "Manuell einrichten",
-        "description": "Zugangsdaten aus RESQIO (Enterprise, Home Assistant, Zugang) eintragen.",
+        "description": "Server-Adresse und Zugangsdaten aus RESQIO (Enterprise, Home Assistant). Broker, Zertifikat und freigegebene Wehren holt die Integration selbst.",
         "data": {
-          "broker_host": "Broker-Host",
-          "broker_port": "Port",
-          "broker_tls": "TLS verwenden",
-          "broker_transport": "Transport",
-          "ws_path": "WebSocket-Pfad (nur bei WebSockets)",
+          "url": "RESQIO-Server-Adresse",
           "username": "Benutzername",
           "password": "Passwort",
-          "topic_root": "Topic-Wurzel",
-          "departments": "Wehr-Kürzel (kommagetrennt)",
-          "ca_pem": "CA-Zertifikat (optional, PEM)"
-        },
-        "data_description": {
-          "departments": "Die Kürzel der freigegebenen Feuerwehren, z. B. hauptwache, ortsteil-nord.",
-          "broker_transport": "WebSockets leitet MQTT über den normalen HTTPS-Port, für Netze, die die MQTT-Ports sperren. Der Broker muss einen WebSocket-Pfad anbieten."
+          "ca_file": "CA-Zertifikat (optional, überschreibt das vom Server)"
         }
       },
       "reauth_confirm": {
@@ -72,6 +62,7 @@
       "invalid_topic_root": "Die Topic-Wurzel ist ungültig.",
       "invalid_departments": "Die Wehr-Kürzel sind ungültig oder doppelt.",
       "unknown": "Unbekannter Fehler.",
+      "invalid_certificate": "Die Datei ist kein gültiges PEM-Zertifikat.",
       "invalid_transport": "Transport oder WebSocket-Pfad ist ungültig."
     },
     "abort": {
@@ -184,18 +175,10 @@
       }
     }
   },
-  "selector": {
-    "broker_transport": {
-      "options": {
-        "tcp": "TCP (Standard)",
-        "websockets": "WebSockets (Port 443 hinter Proxy)"
-      }
-    }
-  },
   "issues": {
     "long_outage": {
       "title": "RESQIO-Broker nicht erreichbar",
-      "description": "Home Assistant hat seit mehr als 10 Minuten keine Verbindung zum RESQIO-Broker ({host}). Solange kommen keine Alarme an. Prüfen Sie Netzwerk, Firewall und die Serveradresse. Sind die MQTT-Ports gesperrt, stellen Sie über „Neu konfigurieren“ den Transport auf WebSockets."
+      "description": "Home Assistant hat seit mehr als 10 Minuten keine Verbindung zum RESQIO-Broker ({host}). Solange kommen keine Alarme an. Prüfen Sie Netzwerk, Firewall und die Serveradresse. Sind die MQTT-Ports gesperrt, bitten Sie Ihren Administrator, den Broker über WebSockets anzubieten."
     }
   }
 }

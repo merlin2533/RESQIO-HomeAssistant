@@ -18,6 +18,7 @@ CONF_DEPARTMENTS = "departments"
 
 # Kopplungs- und Statusendpunkte des RESQIO-Servers
 PAIRING_EXCHANGE_PATH = "/api/ha-bridge/pairing/exchange"
+DISCOVER_PATH = "/api/ha-bridge/discover"
 CAPABILITIES_PATH = "/api/system/capabilities"
 
 # Dispatcher-Signale je Config-Entry
