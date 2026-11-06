@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -87,6 +88,31 @@ class ResqioEntity(Entity):
     @property
     def available(self) -> bool:
         return self._hub.connected and self._raw is not None
+
+
+DIAGNOSTIC_PREFIX = "diagnostic"
+
+
+class ResqioDiagnosticEntity(ResqioEntity):
+    """Diagnose-Entitaet zur Verbindung. Haengt an keinem Topic und ist immer verfuegbar.
+
+    Der Schluessel beginnt mit `diagnostic/`; die Wiederherstellung aus der Registry ueberspringt
+    ihn (kein Topic), weil diese Entitaeten beim Plattform-Setup ohnehin direkt angelegt werden.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hub: ResqioHub, slug: str, field: str, translation_key: str) -> None:
+        super().__init__(hub, slug, f"{DIAGNOSTIC_PREFIX}/{field}", field=field, translation_key=translation_key)
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @callback
+    def _handle_update(self, slug: str | None, key: str | None) -> None:
+        if slug is None or slug == self._slug:
+            self.async_write_ha_state()
 
 
 class ResqioStateMixin:

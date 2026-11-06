@@ -18,6 +18,9 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -33,6 +36,9 @@ from .const import (
 )
 from .hub import probe_connection
 from .parsing import (
+    DEFAULT_WS_PATH,
+    TRANSPORT_TCP,
+    TRANSPORTS,
     ConnectionSettings,
     InvalidSettings,
     build_settings,
@@ -65,6 +71,14 @@ MANUAL_SCHEMA = vol.Schema(
             NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
         ),
         vol.Required("broker_tls", default=False): BooleanSelector(),
+        vol.Required("broker_transport", default=TRANSPORT_TCP): SelectSelector(
+            SelectSelectorConfig(
+                options=list(TRANSPORTS),
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="broker_transport",
+            )
+        ),
+        vol.Optional("ws_path", default=DEFAULT_WS_PATH): TextSelector(),
         vol.Required("username"): TextSelector(),
         vol.Required("password"): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
         vol.Required("topic_root", default="HomeAssistant"): TextSelector(),

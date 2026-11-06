@@ -1,0 +1,92 @@
+blueprint:
+  name: RESQIO – Benachrichtigung bei Alarm
+  description: >-
+    Schickt eine Benachrichtigung (zum Beispiel aufs Handy), sobald RESQIO einen Alarm,
+    eine Nachalarmierung oder das Einsatzende meldet. Optional nur für bestimmte
+    Stichwörter. Das Ereignis wird nur bei einer Live-Meldung ausgelöst, nie beim Start
+    von Home Assistant.
+  domain: automation
+  input:
+    alarm_ereignis:
+      name: Alarm-Ereignis
+      description: Entität „Alarm-Ereignis“ der Wehr (Gerät „RESQIO <Wehr>“).
+      selector:
+        entity:
+          domain: event
+    stichwort_sensor:
+      name: Stichwort-Sensor
+      description: Sensor „Stichwort“ der Wehr. Wird für den Text und den Filter gelesen.
+      selector:
+        entity:
+          domain: sensor
+    ereignisarten:
+      name: Ereignisarten
+      description: Bei welchen Meldungen benachrichtigt wird.
+      default:
+        - neu
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Neuer Alarm
+              value: neu
+            - label: Nachalarmierung
+              value: nachalarmiert
+            - label: Einsatz beendet
+              value: beendet
+    stichwort_filter:
+      name: Stichwort-Filter (optional)
+      description: >-
+        Nur benachrichtigen, wenn das Stichwort eines dieser Wörter enthält (Groß- und
+        Kleinschreibung egal), zum Beispiel „B3, THL“. Leer lassen für alle Stichwörter.
+      default: ""
+      selector:
+        text:
+    benachrichtigung:
+      name: Benachrichtigungsdienst
+      description: >-
+        Aktion der Benachrichtigung, zum Beispiel notify.mobile_app_mein_handy. Im Text
+        stehen {{ titel }} (Alarm, Nachalarmierung, Einsatz beendet) und {{ stichwort }}
+        zur Verfügung.
+      selector:
+        action:
+
+variables:
+  ereignisarten: !input ereignisarten
+  stichwort_filter: !input stichwort_filter
+  stichwort_sensor: !input stichwort_sensor
+
+trigger:
+  - trigger: state
+    entity_id: !input alarm_ereignis
+    id: ereignis
+
+condition:
+  - condition: template
+    value_template: >-
+      {{ trigger.to_state is not none
+         and trigger.to_state.state not in ['unknown', 'unavailable']
+         and trigger.to_state.attributes.event_type in ereignisarten }}
+  - condition: template
+    value_template: >-
+      {% set filter = (stichwort_filter | lower).split(',') | map('trim') | reject('equalto', '') | list %}
+      {% set wort = states(stichwort_sensor) | lower %}
+      {{ filter | length == 0
+         or filter | select('in', wort) | list | length > 0 }}
+
+action:
+  - variables:
+      art: "{{ trigger.to_state.attributes.event_type }}"
+      titel: >-
+        {% if art == 'neu' %}Alarm
+        {% elif art == 'nachalarmiert' %}Nachalarmierung
+        {% else %}Einsatz beendet{% endif %}
+      stichwort: >-
+        {% set s = states(stichwort_sensor) %}
+        {{ s if s not in ['unknown', 'unavailable', ''] else '' }}
+  # Die gewählte Aktion kann die Variablen {{ titel }}, {{ stichwort }} und {{ art }} verwenden.
+  - alias: Benachrichtigung senden
+    sequence: !input benachrichtigung
+
+mode: queued
+max: 5

@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.util import dt as dt_util
 
-from .entity import ResqioEntity, async_setup_dynamic
+from .entity import ResqioDiagnosticEntity, ResqioEntity, async_setup_dynamic
 from .hub import ResqioHub
 from .parsing import HEARTBEAT_MAX_AGE_SECONDS, Kind
 
@@ -93,6 +93,23 @@ class ResqioBridgeBinarySensor(ResqioEntity, BinarySensorEntity):
         self.async_write_ha_state()
 
 
+class ResqioConnectionBinarySensor(ResqioDiagnosticEntity, BinarySensorEntity):
+    """Verbindung von Home Assistant zum RESQIO-Broker (nicht der Heartbeat des Servers)."""
+
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, hub: ResqioHub, slug: str) -> None:
+        super().__init__(hub, slug, "connection", "connection")
+
+    @property
+    def is_on(self) -> bool:
+        return self._hub.connected
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        return {"transport": self._hub.settings.broker_transport}
+
+
 def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[Entity]:
     if kind is Kind.ALARM_STATE:
         return [ResqioAlarmBinarySensor(hub, slug, key)]
@@ -102,4 +119,6 @@ def _build(hub: ResqioHub, slug: str, key: str, kind: Kind, ident: str) -> list[
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    hub: ResqioHub = entry.runtime_data
+    async_add_entities(ResqioConnectionBinarySensor(hub, dept.slug) for dept in hub.settings.departments)
     await async_setup_dynamic(hass, entry, "binary_sensor", async_add_entities, _build)

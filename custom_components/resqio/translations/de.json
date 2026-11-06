@@ -24,6 +24,8 @@
           "broker_host": "Broker-Host",
           "broker_port": "Port",
           "broker_tls": "TLS verwenden",
+          "broker_transport": "Transport",
+          "ws_path": "WebSocket-Pfad (nur bei WebSockets)",
           "username": "Benutzername",
           "password": "Passwort",
           "topic_root": "Topic-Wurzel",
@@ -31,7 +33,8 @@
           "ca_pem": "CA-Zertifikat (optional, PEM)"
         },
         "data_description": {
-          "departments": "Die Kürzel der freigegebenen Feuerwehren, z. B. hauptwache, ortsteil-nord."
+          "departments": "Die Kürzel der freigegebenen Feuerwehren, z. B. hauptwache, ortsteil-nord.",
+          "broker_transport": "WebSockets leitet MQTT über den normalen HTTPS-Port, für Netze, die die MQTT-Ports sperren. Der Broker muss einen WebSocket-Pfad anbieten."
         }
       },
       "reauth_confirm": {
@@ -68,7 +71,8 @@
       "invalid_username": "Der Benutzername ist ungültig.",
       "invalid_topic_root": "Die Topic-Wurzel ist ungültig.",
       "invalid_departments": "Die Wehr-Kürzel sind ungültig oder doppelt.",
-      "unknown": "Unbekannter Fehler."
+      "unknown": "Unbekannter Fehler.",
+      "invalid_transport": "Transport oder WebSocket-Pfad ist ungültig."
     },
     "abort": {
       "already_configured": "Dieser Zugang ist bereits eingerichtet. Seine Zugangsdaten wurden aktualisiert.",
@@ -85,6 +89,9 @@
       },
       "bridge_online": {
         "name": "Bridge online"
+      },
+      "connection": {
+        "name": "Verbindung"
       }
     },
     "sensor": {
@@ -141,6 +148,12 @@
       },
       "road_closures": {
         "name": "Straßensperrungen"
+      },
+      "last_message": {
+        "name": "Letzte Nachricht"
+      },
+      "reconnects": {
+        "name": "Wiederverbindungen"
       }
     },
     "device_tracker": {
@@ -169,6 +182,20 @@
       "reservations_all": {
         "name": "Reservierungen gesamt"
       }
+    }
+  },
+  "selector": {
+    "broker_transport": {
+      "options": {
+        "tcp": "TCP (Standard)",
+        "websockets": "WebSockets (Port 443 hinter Proxy)"
+      }
+    }
+  },
+  "issues": {
+    "long_outage": {
+      "title": "RESQIO-Broker nicht erreichbar",
+      "description": "Home Assistant hat seit mehr als 10 Minuten keine Verbindung zum RESQIO-Broker ({host}). Solange kommen keine Alarme an. Prüfen Sie Netzwerk, Firewall und die Serveradresse. Sind die MQTT-Ports gesperrt, stellen Sie über „Neu konfigurieren“ den Transport auf WebSockets."
     }
   }
 }
